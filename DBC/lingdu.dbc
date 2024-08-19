@@ -1,0 +1,26 @@
+VERSION ""
+
+NS_ :
+
+
+BS_:
+
+BU_:Gateway_MQB
+
+
+BO_ 1866 TMFB: 8 XXX
+ SG_ Window_Driver_UP: 0|16@1+ (1,0) [12036|12036] "" XXX
+ SG_ Window_Driver_DOWN: 0|16@1+ (1,0) [48|48] "" XXX
+ SG_ Window_Driver_STOP: 24|32@1+ (1,0) [1041|1041] ""
+
+BO_ 1867 TMFB: 8 XXX
+ SG_ Window_Passenger_UP: 24|16@1+ (1,0) [3|4100] "" XXX
+ SG_ Window_Passenger_DOWN: 24|16@1+ (1,0) [4356|4356] "" XXX
+ SG_ Window_Passenger_STOP: 24|16@1+ (1,0) [1041|1041] "" XXX
+ SG_ Window_Passenger_Test: 0|3@1+ (1,0) [3|3] "" XXX
+
+BO_ 1806 TMFB: 8 XXX
+ SG_ Light_ON: 0|24@1+ (1,0) [33|33] "" XXX
+ SG_ Light_OFF: 24|24@1+ (1,0) [5570635|5570635] "" XXX
+
+
