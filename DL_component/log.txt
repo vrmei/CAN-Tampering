@@ -1,0 +1,78 @@
+
+Model Type: CNN
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor([0.9939]), tensor([0.9957]), tensor([0.9968]), tensor([0.9973]), tensor([0.9974]), tensor([0.9977]), tensor([0.9978]), tensor([0.9976]), tensor([0.9981]), tensor([0.9982])]
+Max Accuracy: tensor([0.9982])
+Mean Accuracy: tensor([0.9970])
+
+Model Type: CNN
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor([0.8133]), tensor([0.8193]), tensor([0.8463]), tensor([0.8874]), tensor([0.8086]), tensor([0.8237]), tensor([0.9005]), tensor([0.9134]), tensor([0.8699]), tensor([0.9140])]
+Max Accuracy: tensor([0.9140])
+Mean Accuracy: tensor([0.8596])
+
+Model Type: CNN
+Data Source: Seo
+Attack Type: gear
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor([0.9956]), tensor([0.9978]), tensor([0.9985]), tensor([0.9976]), tensor([0.9988]), tensor([0.9992]), tensor([0.9995]), tensor([0.9992]), tensor([0.9998]), tensor([0.9998])]
+Max Accuracy: tensor([0.9998])
+Mean Accuracy: tensor([0.9986])
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9730), tensor(0.9806), tensor(0.9836), tensor(0.9873), tensor(0.9886), tensor(0.9885), tensor(0.9907), tensor(0.9923), tensor(0.9918), tensor(0.9941)]
+Max Accuracy: 0.9941189289093018
+Mean Accuracy: 0.9870530366897583
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9350), tensor(0.9715), tensor(0.9681), tensor(0.9624), tensor(0.9566), tensor(0.9400), tensor(0.9697), tensor(0.9794), tensor(0.9734), tensor(0.9708)]
+Max Accuracy: 0.9794015884399414
+Mean Accuracy: 0.9626890420913696
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: gear
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9756), tensor(0.9859), tensor(0.9907), tensor(0.9943), tensor(0.9923), tensor(0.9924), tensor(0.9950), tensor(0.9942), tensor(0.9925), tensor(0.9933)]
+Max Accuracy: 0.9949511289596558
+Mean Accuracy: 0.9906238317489624
