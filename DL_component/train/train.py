@@ -9,7 +9,8 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import argparse
 import numpy as np
 import pandas as pd
-import faiss
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
 from collections import Counter
 
 import torch.utils
@@ -34,7 +35,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
 parser.add_argument("--model_type", type=str, default='KNN', help="which model will be used(KNN, CNN, Attn, SVM)")
 parser.add_argument("--data_src", type=str, default='Seo', help="the dataset where generated")
-parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
+parser.add_argument("--attack_type", type=str, default='gear', help="which attack in: DoS, Fuzz or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
 parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of traning")
 parser.add_argument("--n_classes", type=int, default=2, help="how many classes have")
@@ -129,45 +130,36 @@ print(output_str)
 output_str += '\n\n'
 
 if opt.model_type == 'KNN':
-    train_data = train_data.iloc[1:].reset_index(drop=True)
-    train_label = train_label.iloc[1:].reset_index(drop=True)
-    test_data = test_data.iloc[1:].reset_index(drop=True)
-    test_label = test_label.iloc[1:].reset_index(drop=True)
-    # 转换为 float32，因为 Faiss 需要
+    # 将训练数据和测试数据转换为NumPy数组
     train_data = np.array(train_data.values, dtype='float32')
     test_data = np.array(test_data.values, dtype='float32')
+    train_label = np.array(train_label.values, dtype='float32')
+    test_label = np.array(test_label.values, dtype='float32')
 
-    # 创建 Faiss 索引
-    index = faiss.IndexFlatL2(train_data.shape[1])
+    # 假设train_data包含特征和标签，我们分离它们
+    X_train = train_data[:, :-1]  # 特征
+    y_train = train_label.ravel()  # 标签
 
-    # 如果有 GPU，可使用下面这行代码将索引移动到 GPU
-    res = faiss.StandardGpuResources()  # 使用 GPU
-    index = faiss.index_cpu_to_gpu(res, 0, index)  # 0 表示 GPU ID
+    X_test = test_data[:, :-1]    # 测试特征
+    y_test = test_label.ravel()     # 测试标签
 
-    # 将训练数据添加到索引中
-    index.add(train_data)
+    # 初始化KNN模型，假设k为3，可以根据需要调整
+    knn = KNeighborsClassifier(n_neighbors=3)
 
-    # 进行搜索，k 为最近邻的数量
-    k = 3
-    D, I = index.search(test_data, k)  # D 是距离，I 是最近邻的索引
+    # 训练KNN模型
+    knn.fit(X_train, y_train)
 
-    # 根据索引查找最近邻的标签并计算每个测试样本的预测
-    predictions = []
-    for neighbors in I:
-        # 获取最近邻的标签
-        neighbor_labels = train_label.iloc[neighbors]
-        # 计算众数
-        most_common_label = Counter(neighbor_labels).most_common(1)[0][0]
-        predictions.append(most_common_label)
+    # 使用测试数据进行预测
+    predictions = knn.predict(X_test)
 
-    # 转换为 numpy 数组
-    predictions = np.array(predictions)
+    # 计算预测准确率
+    acc = accuracy_score(y_test, predictions)
 
-    # 输出进度和最终结果
-    output_str = f'Final Accuracy: {predictions}\n'
+    # 输出最终的准确率结果
+    output_str += f'Final Accuracy: {acc * 100:.2f}%\n'
     with open("log.txt", "a") as f:
         f.write(output_str)
-    #print(f"Final Accuracy of KNN: {acc}")
+    print(f"Final Accuracy of KNN: {acc}")
     exit()
 
 if opt.loss_type == 'MSE':
