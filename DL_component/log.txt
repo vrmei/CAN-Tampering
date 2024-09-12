@@ -76,3 +76,5 @@ Learning Rate: 0.0001
 Final Accuracy: [tensor(0.9756), tensor(0.9859), tensor(0.9907), tensor(0.9943), tensor(0.9923), tensor(0.9924), tensor(0.9950), tensor(0.9942), tensor(0.9925), tensor(0.9933)]
 Max Accuracy: 0.9949511289596558
 Mean Accuracy: 0.9906238317489624
+Final Accuracy: ['Label' 'Label' 'Label' ... 'Label' 'Label' 'Label']
+Final Accuracy: ['Label' 'Label' 'Label' ... 'Label' 'Label' 'Label']

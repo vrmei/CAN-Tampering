@@ -9,6 +9,8 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import argparse
 import numpy as np
 import pandas as pd
+import faiss
+from collections import Counter
 
 import torch.utils
 from torch.utils import data
@@ -127,25 +129,45 @@ print(output_str)
 output_str += '\n\n'
 
 if opt.model_type == 'KNN':
-    # 如果选择KNN，直接执行KNN的fit和predict过程
-    print("Training KNN model...")
-    model.fit(train_data.values, train_label.values.ravel())  # KNN的训练
-    
-    print("Predicting with KNN model...")
-    
-    # 使用 tqdm 显示预测过程的进度
+    train_data = train_data.iloc[1:].reset_index(drop=True)
+    train_label = train_label.iloc[1:].reset_index(drop=True)
+    test_data = test_data.iloc[1:].reset_index(drop=True)
+    test_label = test_label.iloc[1:].reset_index(drop=True)
+    # 转换为 float32，因为 Faiss 需要
+    train_data = np.array(train_data.values, dtype='float32')
+    test_data = np.array(test_data.values, dtype='float32')
+
+    # 创建 Faiss 索引
+    index = faiss.IndexFlatL2(train_data.shape[1])
+
+    # 如果有 GPU，可使用下面这行代码将索引移动到 GPU
+    res = faiss.StandardGpuResources()  # 使用 GPU
+    index = faiss.index_cpu_to_gpu(res, 0, index)  # 0 表示 GPU ID
+
+    # 将训练数据添加到索引中
+    index.add(train_data)
+
+    # 进行搜索，k 为最近邻的数量
+    k = 3
+    D, I = index.search(test_data, k)  # D 是距离，I 是最近邻的索引
+
+    # 根据索引查找最近邻的标签并计算每个测试样本的预测
     predictions = []
-    for x in tqdm(test_data.values, desc="KNN Predictions"):
-        predictions.append(model._predict_single(x))  # 预测每个样本
-    
-    predictions = np.array(predictions)  # 将结果转换为 NumPy 数组
-    acc = np.mean(predictions == test_label.values.ravel())  # 计算准确率
-    
+    for neighbors in I:
+        # 获取最近邻的标签
+        neighbor_labels = train_label.iloc[neighbors]
+        # 计算众数
+        most_common_label = Counter(neighbor_labels).most_common(1)[0][0]
+        predictions.append(most_common_label)
+
+    # 转换为 numpy 数组
+    predictions = np.array(predictions)
+
     # 输出进度和最终结果
-    output_str += f'Final Accuracy: {acc}\n'
+    output_str = f'Final Accuracy: {predictions}\n'
     with open("log.txt", "a") as f:
         f.write(output_str)
-    print(f"Final Accuracy of KNN: {acc}")
+    #print(f"Final Accuracy of KNN: {acc}")
     exit()
 
 if opt.loss_type == 'MSE':
