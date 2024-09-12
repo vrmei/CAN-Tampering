@@ -1,1 +1,2 @@
-# CANFuzz hello
+# CANFuzz
+This is a project

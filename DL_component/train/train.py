@@ -20,9 +20,7 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import *
-from modules.CNN import CNN
-from modules.Transformer import TransformerClassifier
-from sklearn import metrics
+from modules.model import TransformerClassifier_noposition, CNN, KNN
 import random
 
 seed = 42
@@ -32,9 +30,9 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used(KNN, CNN, Attn, SVM)")
+parser.add_argument("--model_type", type=str, default='KNN', help="which model will be used(KNN, CNN, Attn, SVM)")
 parser.add_argument("--data_src", type=str, default='Seo', help="the dataset where generated")
-parser.add_argument("--attack_type", type=str, default='gear', help="which attack in: DoS, Fuzz or Gear")
+parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
 parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of traning")
 parser.add_argument("--n_classes", type=int, default=2, help="how many classes have")
@@ -112,9 +110,43 @@ testdataloader = data.DataLoader(torch_data_test, batch_size=32, shuffle=True)
 if opt.model_type == 'CNN':
     model = CNN().to(device)
 elif opt.model_type == 'KNN':
-    model = KNN().to(device)
+    model = KNN()
 elif opt.model_type == 'Attn':
-    model = TransformerClassifier(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=2).to(device)
+    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=2).to(device)
+
+
+output_str = f"""
+Model Type: {opt.model_type}
+Data Source: {opt.data_src}
+Attack Type: {opt.attack_type}
+Training Proportion: {opt.propotion}
+Number of Classes: {opt.n_classes}
+"""
+print(output_str)
+
+output_str += '\n\n'
+
+if opt.model_type == 'KNN':
+    # 如果选择KNN，直接执行KNN的fit和predict过程
+    print("Training KNN model...")
+    model.fit(train_data.values, train_label.values.ravel())  # KNN的训练
+    
+    print("Predicting with KNN model...")
+    
+    # 使用 tqdm 显示预测过程的进度
+    predictions = []
+    for x in tqdm(test_data.values, desc="KNN Predictions"):
+        predictions.append(model._predict_single(x))  # 预测每个样本
+    
+    predictions = np.array(predictions)  # 将结果转换为 NumPy 数组
+    acc = np.mean(predictions == test_label.values.ravel())  # 计算准确率
+    
+    # 输出进度和最终结果
+    output_str += f'Final Accuracy: {acc}\n'
+    with open("log.txt", "a") as f:
+        f.write(output_str)
+    print(f"Final Accuracy of KNN: {acc}")
+    exit()
 
 if opt.loss_type == 'MSE':
     criterion = torch.nn.MSELoss()
@@ -204,9 +236,8 @@ Max Accuracy: {max(test_acc)}
 Mean Accuracy: {sum(test_acc) / len(test_acc)}
 """
 
-# 3. 将输出内容写入 log.txt 文件
 with open("log.txt", "a") as f:
     f.write(output_str)
 
 print(test_acc,"max:",max(test_acc), "   mean:", sum(test_acc) / len(test_acc))
-torch.save(model, opt.model_type + opt.data_src + "model.pth")
+torch.save(model, "./output/" + opt.model_type + opt.data_src + "model.pth")
