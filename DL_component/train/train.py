@@ -10,6 +10,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from collections import Counter
 
@@ -23,7 +24,7 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import *
-from modules.model import TransformerClassifier_noposition, CNN, KNN
+from modules.model import TransformerClassifier_noposition, CNN, KNN, SVM
 import random
 
 seed = 42
@@ -33,9 +34,9 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='KNN', help="which model will be used(KNN, CNN, Attn, SVM)")
-parser.add_argument("--data_src", type=str, default='Seo', help="the dataset where generated")
-parser.add_argument("--attack_type", type=str, default='gear', help="which attack in: DoS, Fuzz or Gear")
+parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used(KNN, CNN, Attn, SVM)")
+parser.add_argument("--data_src", type=str, default='Seo', help="the dataset name")
+parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
 parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of traning")
 parser.add_argument("--n_classes", type=int, default=2, help="how many classes have")
@@ -110,14 +111,6 @@ traindataloader = data.DataLoader(torch_data_train, batch_size=32, shuffle=True)
 #data_train = Dataloader("preprocess1.csv",)
 testdataloader = data.DataLoader(torch_data_test, batch_size=32, shuffle=True)
 
-if opt.model_type == 'CNN':
-    model = CNN().to(device)
-elif opt.model_type == 'KNN':
-    model = KNN()
-elif opt.model_type == 'Attn':
-    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=2).to(device)
-
-
 output_str = f"""
 Model Type: {opt.model_type}
 Data Source: {opt.data_src}
@@ -129,18 +122,20 @@ print(output_str)
 
 output_str += '\n\n'
 
-if opt.model_type == 'KNN':
+if opt.model_type == 'CNN':
+    model = CNN().to(device)
+elif opt.model_type == 'KNN':
+    model = KNN()
     # 将训练数据和测试数据转换为NumPy数组
     train_data = np.array(train_data.values, dtype='float32')
     test_data = np.array(test_data.values, dtype='float32')
     train_label = np.array(train_label.values, dtype='float32')
     test_label = np.array(test_label.values, dtype='float32')
 
-    # 假设train_data包含特征和标签，我们分离它们
-    X_train = train_data[:, :-1]  # 特征
+    X_train = train_data
     y_train = train_label.ravel()  # 标签
 
-    X_test = test_data[:, :-1]    # 测试特征
+    X_test = test_data
     y_test = test_label.ravel()     # 测试标签
 
     # 初始化KNN模型，假设k为3，可以根据需要调整
@@ -161,6 +156,35 @@ if opt.model_type == 'KNN':
         f.write(output_str)
     print(f"Final Accuracy of KNN: {acc}")
     exit()
+
+elif opt.model_type == 'Attn':
+    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=2).to(device)
+    
+elif opt.model_type == 'SVM':
+
+    train_data = np.array(train_data.values, dtype='float32')
+    test_data = np.array(test_data.values, dtype='float32')
+    train_label = np.array(train_label.values, dtype='float32').flatten()
+    test_label = np.array(test_label.values, dtype='float32').flatten()
+
+    svm_model = SVC(kernel='linear', C=1.0, verbose=True)
+    svm_model.fit(train_data, train_label)
+
+    # 使用 tqdm 显示预测过程的进度条
+    predictions = []
+    for i in tqdm(range(len(test_data)), desc="Predicting"):
+        prediction = svm_model.predict([test_data[i]])
+        predictions.append(prediction[0])
+
+    # 转换为 NumPy 数组以便后续评估
+    predictions = np.array(predictions)
+
+    accuracy = accuracy_score(test_label, predictions)
+    print(f"Accuracy on test data: {accuracy * 100:.2f}%")
+
+else:
+    raise ValueError("Invalid model_type specified.")
+
 
 if opt.loss_type == 'MSE':
     criterion = torch.nn.MSELoss()

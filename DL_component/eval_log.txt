@@ -1,0 +1,5 @@
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: DoS
+Final Accuracy: 0.9945945739746094

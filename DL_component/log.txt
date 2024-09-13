@@ -104,3 +104,16 @@ Number of Classes: 2
 
 
 Final Accuracy: 96.77%
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.8
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9724), tensor(0.9806), tensor(0.9856), tensor(0.9867), tensor(0.9894), tensor(0.9889), tensor(0.9897), tensor(0.9916), tensor(0.9913), tensor(0.9930)]
+Max Accuracy: 0.9929946064949036
+Mean Accuracy: 0.986901581287384
