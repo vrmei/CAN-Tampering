@@ -20,7 +20,7 @@ from torch.utils import data
 from tqdm import tqdm
 import random
 
-from modules.model import TransformerClassifier_noposition, CNN, KNN, SVM
+from modules.model import TransformerClassifier_noposition, CNN, KNN
 
 # 固定随机种子
 seed = 42

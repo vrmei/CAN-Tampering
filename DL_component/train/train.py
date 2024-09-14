@@ -24,7 +24,7 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import *
-from modules.model import TransformerClassifier_noposition, CNN, KNN, SVM
+from modules.model import TransformerClassifier_noposition, CNN, KNN
 import random
 
 seed = 42
