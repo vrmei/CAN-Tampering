@@ -78,7 +78,7 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2),
         )
         self.output = nn.Sequential(
-            nn.Linear(in_features=128, out_features=1),
+            nn.Linear(in_features=128, out_features=2),
             nn.Sigmoid()
         )
         
