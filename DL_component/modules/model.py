@@ -3,6 +3,50 @@ import torch.nn as nn
 import numpy as np
 from collections import Counter
 
+class ANN(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes):
+        super(ANN, self).__init__()
+        # 定义第一个全连接层
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        # 定义第二个全连接层
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        # 定义输出层
+        self.output_layer = nn.Linear(hidden_dim, num_classes)
+        # 定义激活函数
+        self.relu = nn.ReLU()
+    
+    def forward(self, x):
+        # 前向传播：输入 -> 全连接层1 -> 激活函数 -> 全连接层2 -> 激活函数 -> 输出层
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        out = self.relu(out)
+        out = self.output_layer(out)
+        return out
+
+class LSTMClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes, num_layers=1):
+        super(LSTMClassifier, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        # 定义 LSTM 层
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        # 定义输出层
+        self.fc = nn.Linear(hidden_dim, num_classes)
+    
+    def forward(self, x):
+        # x 的形状：(batch_size, seq_length, input_dim)
+        # 初始化隐藏状态和细胞状态为零
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
+        # 前向传播 LSTM
+        out, _ = self.lstm(x, (h0, c0))
+        # 取最后一个时间步的输出
+        out = out[:, -1, :]  # (batch_size, hidden_dim)
+        out = self.fc(out)
+        return out
+
+
 class TransformerClassifier_noposition(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, dropout=0.1):
         """

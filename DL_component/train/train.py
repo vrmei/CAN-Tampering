@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from collections import Counter
 
@@ -22,8 +23,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-from tqdm import *
-from modules.model import TransformerClassifier_noposition, CNN, KNN
+from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
+from modules.model import TransformerClassifier_noposition, CNN, KNN, ANN, LSTMClassifier  # Import ANN and LSTM models
 import random
 
 seed = 42
@@ -33,70 +34,68 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='SVM', help="which model will be used(KNN, CNN, Attn, SVM)")
+parser.add_argument("--model_type", type=str, default='DecisionTree', help="which model will be used (KNN, CNN, Attn, SVM, DecisionTree, ANN, LSTM)")
 parser.add_argument("--data_src", type=str, default='Seo', help="the dataset name")
-parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
-parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
-parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of traning")
-parser.add_argument("--n_classes", type=int, default=2, help="how many classes have")
+parser.add_argument("--attack_type", type=str, default='Fuzz', help="which attack in: DoS, Fuzz, or Gear")
+parser.add_argument("--propotion", type=float, default=0.6, help="the count of train divided by the count of whole")
+parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of training")
+parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
 parser.add_argument("--lr", type=float, default=0.0001)
 opt = parser.parse_args()
 print(opt)
 
 if opt.data_src == 'Seo':
-    if opt.attack_type == 'DoS': 
+    if opt.attack_type == 'DoS':
         source_data = pd.read_csv('data/CNN_data/DoS_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('data/CNN_data/DoS_label.csv')
 
-    elif opt.attack_type == 'Fuzz': 
+    elif opt.attack_type == 'Fuzz':
         source_data = pd.read_csv('data/CNN_data/Fuzz_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('data/CNN_data/Fuzz_label.csv')
 
-    elif opt.attack_type == 'gear': 
+    elif opt.attack_type == 'Gear':
         source_data = pd.read_csv('data/CNN_data/gear_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    if opt.attack_type == 'DoS': 
+    if opt.attack_type == 'DoS':
         source_data = pd.read_csv('gear_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('gear_label.csv')
 
-    elif opt.attack_type == 'Fuzz': 
+    elif opt.attack_type == 'Fuzz':
         source_data = pd.read_csv('gear_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('gear_label.csv')
 
-    elif opt.attack_type == 'gear': 
+    elif opt.attack_type == 'Gear':
         source_data = pd.read_csv('gear_data.csv')
         datalen = int(opt.propotion * len(source_data))
         source_label = pd.read_csv('gear_label.csv')
 
-device, = [torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),]
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class GetDataset(data.Dataset):
     def __init__(self, data_root, data_label):
-        self.data = data_root.values
-        self.label = data_label.values
+        self.data = data_root.values.astype(np.float32)
+        self.label = data_label.values.astype(np.int64)
 
     def __getitem__(self, index):
         data = self.data[index]
         label = self.label[index]
         return data, label
-    
+
     def __len__(self):
         return len(self.data)
 
-train_data = source_data.iloc[:datalen,:]
-train_label = source_label.iloc[:datalen,:]
-test_data = source_data.iloc[datalen:,:]
-test_label = source_label.iloc[datalen:,:]
-
-templist = []
+train_data = source_data.iloc[:datalen, :]
+train_label = source_label.iloc[:datalen, :]
+test_data = source_data.iloc[datalen:, :]
+test_label = source_label.iloc[datalen:, :]
 
 torch_data_train = GetDataset(train_data, train_label)
 torch_data_test = GetDataset(test_data, test_label)
@@ -117,19 +116,20 @@ output_str += '\n\n'
 
 if opt.model_type == 'CNN':
     model = CNN().to(device)
+
 elif opt.model_type == 'KNN':
     model = KNN()
     # Convert training and testing data to NumPy arrays
-    train_data = np.array(train_data.values, dtype='float32')
-    test_data = np.array(test_data.values, dtype='float32')
-    train_label = np.array(train_label.values, dtype='float32')
-    test_label = np.array(test_label.values, dtype='float32')
+    train_data_np = np.array(train_data.values, dtype='float32')
+    test_data_np = np.array(test_data.values, dtype='float32')
+    train_label_np = np.array(train_label.values, dtype='int64').flatten()
+    test_label_np = np.array(test_label.values, dtype='int64').flatten()
 
-    X_train = train_data
-    y_train = train_label.ravel()  # Labels
+    X_train = train_data_np
+    y_train = train_label_np  # Labels
 
-    X_test = test_data
-    y_test = test_label.ravel()  # Test labels
+    X_test = test_data_np
+    y_test = test_label_np  # Test labels
 
     # Initialize KNN model
     knn = KNeighborsClassifier(n_neighbors=3)
@@ -170,27 +170,87 @@ elif opt.model_type == 'KNN':
     print(f"F1 Score: {F1}")
     exit()
 
-elif opt.model_type == 'Attn':
-    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=2).to(device)
-    
-elif opt.model_type == 'SVM':
+elif opt.model_type == 'DecisionTree':
+    # Convert training and testing data to NumPy arrays
+    train_data_np = np.array(train_data.values, dtype='float32')
+    test_data_np = np.array(test_data.values, dtype='float32')
+    train_label_np = np.array(train_label.values, dtype='int64').flatten()
+    test_label_np = np.array(test_label.values, dtype='int64').flatten()
 
-    train_data = np.array(train_data.values, dtype='float32')
-    test_data = np.array(test_data.values, dtype='float32')
-    train_label = np.array(train_label.values, dtype='float32').flatten()
-    test_label = np.array(test_label.values, dtype='float32').flatten()
+    X_train = train_data_np
+    y_train = train_label_np  # Labels
 
-    svm_model = SVC(kernel='linear', C=1.0, verbose=True)
-    svm_model.fit(train_data, train_label)
+    X_test = test_data_np
+    y_test = test_label_np  # Test labels
+
+    # Initialize Decision Tree model
+    dt_model = DecisionTreeClassifier()
+
+    # Train Decision Tree model
+    dt_model.fit(X_train, y_train)
 
     # Predict using the test data
-    predictions = svm_model.predict(test_data)
+    predictions = dt_model.predict(X_test)
 
     # Calculate confusion matrix components
-    tp = np.sum((predictions == 1) & (test_label == 1))
-    tn = np.sum((predictions == 0) & (test_label == 0))
-    fp = np.sum((predictions == 1) & (test_label == 0))
-    fn = np.sum((predictions == 0) & (test_label == 1))
+    tp = np.sum((predictions == 1) & (y_test == 1))
+    tn = np.sum((predictions == 0) & (y_test == 0))
+    fp = np.sum((predictions == 1) & (y_test == 0))
+    fn = np.sum((predictions == 0) & (y_test == 1))
+
+    # Calculate metrics
+    total = tp + tn + fp + fn
+    accuracy = (tp + tn) / total
+    FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
+    ER = (fp + fn) / total
+    Recall = tp / (tp + fn) if (tp + fn) != 0 else 0
+    Precision = tp / (tp + fp) if (tp + fp) != 0 else 0
+    F1 = 2 * (Precision * Recall) / (Precision + Recall) if (Precision + Recall) != 0 else 0
+
+    # Output results
+    output_str += f'Final Accuracy: {accuracy * 100:.2f}%\n'
+    output_str += f'False Negative Rate (FNR): {FNR:.4f}\n'
+    output_str += f'Error Rate (ER): {ER:.4f}\n'
+    output_str += f'Recall: {Recall:.4f}\n'
+    output_str += f'F1 Score: {F1:.4f}\n'
+    with open("log.txt", "a") as f:
+        f.write(output_str)
+    print(f"Final Accuracy of Decision Tree: {accuracy}")
+    print(f"False Negative Rate (FNR): {FNR}")
+    print(f"Error Rate (ER): {ER}")
+    print(f"Recall: {Recall}")
+    print(f"F1 Score: {F1}")
+    exit()
+
+elif opt.model_type == 'ANN':
+    # Assuming ANN is defined in modules.model
+    model = ANN(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
+
+elif opt.model_type == 'LSTM':
+    # Assuming LSTMClassifier is defined in modules.model
+    model = LSTMClassifier(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
+
+elif opt.model_type == 'Attn':
+    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=opt.n_classes).to(device)
+
+elif opt.model_type == 'SVM':
+    # Convert training and testing data to NumPy arrays
+    train_data_np = np.array(train_data.values, dtype='float32')
+    test_data_np = np.array(test_data.values, dtype='float32')
+    train_label_np = np.array(train_label.values, dtype='int64').flatten()
+    test_label_np = np.array(test_label.values, dtype='int64').flatten()
+
+    svm_model = SVC(kernel='linear', C=1.0, verbose=True)
+    svm_model.fit(train_data_np, train_label_np)
+
+    # Predict using the test data
+    predictions = svm_model.predict(test_data_np)
+
+    # Calculate confusion matrix components
+    tp = np.sum((predictions == 1) & (test_label_np == 1))
+    tn = np.sum((predictions == 0) & (test_label_np == 0))
+    fp = np.sum((predictions == 1) & (test_label_np == 0))
+    fn = np.sum((predictions == 0) & (test_label_np == 1))
 
     # Calculate metrics
     total = tp + tn + fp + fn
@@ -234,66 +294,69 @@ acc, nums = 0, 0
 for epoch in range(opt.n_epochs):
     acc = nums = 0
     train_epoch_loss = []
+    model.train()
     for idx, (data_x, data_y) in enumerate(traindataloader):
         try:
+            batch_size = data_x.size(0)
             if opt.model_type == 'CNN':
-                data_x = np.reshape(data_x, (32,1,9,9))
-        except:
+                data_x = data_x.view(batch_size, 1, 9, 9)
+            elif opt.model_type == 'LSTM':
+                data_x = data_x.view(batch_size, -1, 9)  # Adjust shape for LSTM
+        except Exception as e:
+            print(f"Error reshaping data_x at batch {idx}: {e}")
             continue
 
-        if opt.loss_type == 'CE':
-            data_x = data_x.to(torch.float32).to(device)
-        else:
-            data_x = data_x.to(torch.long).to(device)
-        data_y = data_y.to(torch.long).to(device)
-        data_y = data_y.squeeze(1)
+        data_x = data_x.to(torch.float32).to(device)
+        data_y = data_y.squeeze(1).to(torch.long).to(device)
+
         outputs = model(data_x)
         optimizer.zero_grad()
         loss = criterion(outputs, data_y)
         loss.backward()
         optimizer.step()
-        predicts = torch.where(outputs[:,1] > 0.5, 1, 0)
-        acc += sum(predicts == data_y).cpu()
+        _, predicts = torch.max(outputs, 1)
+        acc += (predicts == data_y).sum().cpu()
         nums += data_y.size()[0]
         train_epoch_loss.append(loss.item())
         train_loss.append(loss.item())
-        if idx%(len(traindataloader)//100) == 0:
+        if idx % max(1, (len(traindataloader)//100)) == 0:
             print("epoch= {}/{}, {}/{} of train, loss={}".format(
-                epoch, opt.n_epochs, idx, len(traindataloader),loss.item()))
-    print("ACC:",100 * acc / nums)
+                epoch, opt.n_epochs, idx, len(traindataloader), loss.item()))
+    print("Training Accuracy:", 100 * acc / nums)
     train_epochs_loss.append(np.average(train_epoch_loss))
     acc = nums = 0
 
     # Initialize confusion matrix components
     tp, tn, fp, fn = 0, 0, 0, 0
-    for idx, (data_x, data_y) in enumerate(testdataloader):
-        try:
-            if opt.model_type == 'CNN':
-                data_x = np.reshape(data_x, (32,1,9,9))
-        except:
-            continue
-        if opt.loss_type == 'CE':
+    model.eval()
+    with torch.no_grad():
+        for idx, (data_x, data_y) in enumerate(testdataloader):
+            try:
+                batch_size = data_x.size(0)
+                if opt.model_type == 'CNN':
+                    data_x = data_x.view(batch_size, 1, 9, 9)
+                elif opt.model_type == 'LSTM':
+                    data_x = data_x.view(batch_size, -1, 9)  # Adjust shape for LSTM
+            except Exception as e:
+                print(f"Error reshaping data_x at batch {idx}: {e}")
+                continue
             data_x = data_x.to(torch.float32).to(device)
-        else:
-            data_x = data_x.to(torch.long).to(device)
-        data_y = data_y.to(torch.long).to(device)
-        data_y = data_y.squeeze(1)
+            data_y = data_y.squeeze(1).to(torch.long).to(device)
 
-        outputs = model(data_x)
-        loss = criterion(outputs, data_y)
-        test_epochs_loss.append(loss.item())
-        test_loss.append(loss.item())
-        predicts = torch.where(outputs[:,1] > 0.5, 1, 0)
-        acc += sum(predicts == data_y).cpu()
-        nums += data_y.size()[0]
+            outputs = model(data_x)
+            loss = criterion(outputs, data_y)
+            test_epochs_loss.append(loss.item())
+            test_loss.append(loss.item())
+            _, predicts = torch.max(outputs, 1)
+            acc += (predicts == data_y).sum().cpu()
+            nums += data_y.size()[0]
 
-        # Calculate confusion matrix components
-        tp += ((predicts == 1) & (data_y == 1)).sum().item()
-        tn += ((predicts == 0) & (data_y == 0)).sum().item()
-        fp += ((predicts == 1) & (data_y == 0)).sum().item()
-        fn += ((predicts == 0) & (data_y == 1)).sum().item()
+            # Calculate confusion matrix components
+            tp += ((predicts == 1) & (data_y == 1)).sum().item()
+            tn += ((predicts == 0) & (data_y == 0)).sum().item()
+            fp += ((predicts == 1) & (data_y == 0)).sum().item()
+            fn += ((predicts == 0) & (data_y == 1)).sum().item()
 
-    
     # Calculate metrics
     total = tp + tn + fp + fn
     FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
@@ -304,7 +367,7 @@ for epoch in range(opt.n_epochs):
     accuracy = (tp + tn) / total
 
     print("epoch= {}/{}, {}/{} of test, acc=".format(
-        epoch, opt.n_epochs, idx, len(testdataloader)),"%.4f" % float(acc/nums))
+        epoch, opt.n_epochs, idx, len(testdataloader)), "%.4f" % float(acc/nums))
     print(f"False Negative Rate (FNR): {FNR:.4f}")
     print(f"Error Rate (ER): {ER:.4f}")
     print(f"Recall: {Recall:.4f}")
@@ -334,9 +397,9 @@ F1 Score: {F1:.4f}
 with open("log.txt", "a") as f:
     f.write(output_str)
 
-print(test_acc,"max:",max(test_acc), "   mean:", sum(test_acc) / len(test_acc))
+print(test_acc, "max:", max(test_acc), "   mean:", sum(test_acc) / len(test_acc))
 print(f"False Negative Rate (FNR): {FNR}")
 print(f"Error Rate (ER): {ER}")
 print(f"Recall: {Recall}")
 print(f"F1 Score: {F1}")
-torch.save(model, "./output/" + opt.model_type + opt.data_src + "model.pth")
+torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model.pth")

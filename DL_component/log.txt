@@ -202,3 +202,98 @@ False Negative Rate (FNR): 0.0000
 Error Rate (ER): 0.0067
 Recall: 0.0000
 F1 Score: 0.0000
+
+Model Type: CNN
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.8821), tensor(0.8980), tensor(0.9129), tensor(0.9216), tensor(0.8712), tensor(0.9079), tensor(0.9285), tensor(0.9490), tensor(0.9100), tensor(0.9259)]
+Max Accuracy: 0.9489705562591553
+Mean Accuracy: 0.9107133746147156
+False Negative Rate (FNR): 0.0059
+Error Rate (ER): 0.0741
+Recall: 0.9941
+F1 Score: 0.7948
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 100.00%
+False Negative Rate (FNR): 0.0000
+Error Rate (ER): 0.0000
+Recall: 1.0000
+F1 Score: 1.0000
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 100.00%
+False Negative Rate (FNR): 0.0000
+Error Rate (ER): 0.0000
+Recall: 1.0000
+F1 Score: 1.0000
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 100.00%
+False Negative Rate (FNR): 0.0000
+Error Rate (ER): 0.0000
+Recall: 1.0000
+F1 Score: 1.0000
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 99.98%
+False Negative Rate (FNR): 0.0002
+Error Rate (ER): 0.0002
+Recall: 0.9998
+F1 Score: 0.9998
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 99.68%
+False Negative Rate (FNR): 0.0000
+Error Rate (ER): 0.0032
+Recall: 0.0000
+F1 Score: 0.0000
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 96.14%
+False Negative Rate (FNR): 0.0135
+Error Rate (ER): 0.0386
+Recall: 0.9865
+F1 Score: 0.8808
