@@ -51,7 +51,7 @@ This project provides a Python script, `modify_data.py`, designed to modify a da
 Run the script using the command line with the desired arguments.
 
 ```bash
-python modify_data.py --input_file path/to/your/input.csv --output_file path/to/your/output.csv --x 100 --modify_type payload
+python scripts/modify_data.py --input_file path/to/your/input.csv --output_file path/to/your/output.csv --x 100 --modify_type payload
 ```
 
 #### **Arguments:**
@@ -74,8 +74,7 @@ python modify_data.py --input_file path/to/your/input.csv --output_file path/to/
 - **Modify Only CANID:**
 
   ```bash
-  python modify_data.py --input_file data/original_data.csv --output_file data/modified_data.csv --x 100 --modify_type CANID
-  ```
+python scripts/modify_data.py --input_file data/owndata/processed/white.csv --output_file data/owndata/attackdata/1.csv --x 100 --modify_type CANID  ```
 
 - **Modify Only Payload:**
 

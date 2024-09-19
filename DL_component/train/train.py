@@ -10,7 +10,6 @@ import argparse
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from collections import Counter
@@ -34,9 +33,9 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='DecisionTree', help="which model will be used (KNN, CNN, Attn, SVM, DecisionTree, ANN, LSTM)")
+parser.add_argument("--model_type", type=str, default='ANN', help="which model will be used (KNN, CNN, Attn, DecisionTree, ANN, LSTM)")
 parser.add_argument("--data_src", type=str, default='Seo', help="the dataset name")
-parser.add_argument("--attack_type", type=str, default='Fuzz', help="which attack in: DoS, Fuzz, or Gear")
+parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
 parser.add_argument("--propotion", type=float, default=0.6, help="the count of train divided by the count of whole")
 parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of training")
 parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
@@ -233,49 +232,6 @@ elif opt.model_type == 'LSTM':
 elif opt.model_type == 'Attn':
     model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=opt.n_classes).to(device)
 
-elif opt.model_type == 'SVM':
-    # Convert training and testing data to NumPy arrays
-    train_data_np = np.array(train_data.values, dtype='float32')
-    test_data_np = np.array(test_data.values, dtype='float32')
-    train_label_np = np.array(train_label.values, dtype='int64').flatten()
-    test_label_np = np.array(test_label.values, dtype='int64').flatten()
-
-    svm_model = SVC(kernel='linear', C=1.0, verbose=True)
-    svm_model.fit(train_data_np, train_label_np)
-
-    # Predict using the test data
-    predictions = svm_model.predict(test_data_np)
-
-    # Calculate confusion matrix components
-    tp = np.sum((predictions == 1) & (test_label_np == 1))
-    tn = np.sum((predictions == 0) & (test_label_np == 0))
-    fp = np.sum((predictions == 1) & (test_label_np == 0))
-    fn = np.sum((predictions == 0) & (test_label_np == 1))
-
-    # Calculate metrics
-    total = tp + tn + fp + fn
-    accuracy = (tp + tn) / total
-    FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
-    ER = (fp + fn) / total
-    Recall = tp / (tp + fn) if (tp + fn) != 0 else 0
-    Precision = tp / (tp + fp) if (tp + fp) != 0 else 0
-    F1 = 2 * (Precision * Recall) / (Precision + Recall) if (Precision + Recall) != 0 else 0
-
-    # Output results
-    output_str += f'Final Accuracy: {accuracy * 100:.2f}%\n'
-    output_str += f'False Negative Rate (FNR): {FNR:.4f}\n'
-    output_str += f'Error Rate (ER): {ER:.4f}\n'
-    output_str += f'Recall: {Recall:.4f}\n'
-    output_str += f'F1 Score: {F1:.4f}\n'
-    with open("log.txt", "a") as f:
-        f.write(output_str)
-    print(f"Accuracy on test data: {accuracy * 100:.2f}%")
-    print(f"False Negative Rate (FNR): {FNR}")
-    print(f"Error Rate (ER): {ER}")
-    print(f"Recall: {Recall}")
-    print(f"F1 Score: {F1}")
-    exit()
-
 else:
     raise ValueError("Invalid model_type specified.")
 
@@ -301,7 +257,7 @@ for epoch in range(opt.n_epochs):
             if opt.model_type == 'CNN':
                 data_x = data_x.view(batch_size, 1, 9, 9)
             elif opt.model_type == 'LSTM':
-                data_x = data_x.view(batch_size, -1, 9)  # Adjust shape for LSTM
+                data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
         except Exception as e:
             print(f"Error reshaping data_x at batch {idx}: {e}")
             continue
@@ -336,7 +292,7 @@ for epoch in range(opt.n_epochs):
                 if opt.model_type == 'CNN':
                     data_x = data_x.view(batch_size, 1, 9, 9)
                 elif opt.model_type == 'LSTM':
-                    data_x = data_x.view(batch_size, -1, 9)  # Adjust shape for LSTM
+                    data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
             except Exception as e:
                 print(f"Error reshaping data_x at batch {idx}: {e}")
                 continue

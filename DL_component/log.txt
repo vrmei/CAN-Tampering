@@ -297,3 +297,165 @@ False Negative Rate (FNR): 0.0135
 Error Rate (ER): 0.0386
 Recall: 0.9865
 F1 Score: 0.8808
+
+Model Type: DecisionTree
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 99.58%
+False Negative Rate (FNR): 0.0018
+Error Rate (ER): 0.0042
+Recall: 0.9982
+F1 Score: 0.9916
+
+Model Type: Attn
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9542), tensor(0.9673), tensor(0.9717), tensor(0.9747), tensor(0.9817), tensor(0.9813), tensor(0.9839), tensor(0.9848), tensor(0.9871), tensor(0.9873)]
+Max Accuracy: 0.987321674823761
+Mean Accuracy: 0.9773808717727661
+False Negative Rate (FNR): 0.0169
+Error Rate (ER): 0.0127
+Recall: 0.9831
+F1 Score: 0.9746
+
+Model Type: CNN
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9825), tensor(0.9886), tensor(0.9913), tensor(0.9928), tensor(0.9931), tensor(0.9943), tensor(0.9949), tensor(0.9952), tensor(0.9951), tensor(0.9959)]
+Max Accuracy: 0.9959425330162048
+Mean Accuracy: 0.992374062538147
+False Negative Rate (FNR): 0.0086
+Error Rate (ER): 0.0041
+Recall: 0.9914
+F1 Score: 0.9918
+
+Model Type: KNN
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Classes: 2
+
+
+Final Accuracy: 96.31%
+False Negative Rate (FNR): 0.0233
+Error Rate (ER): 0.0369
+Recall: 0.9767
+F1 Score: 0.9291
+
+Model Type: LSTM
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9724), tensor(0.9893), tensor(0.9927), tensor(0.9934), tensor(0.9946), tensor(0.9954), tensor(0.9958), tensor(0.9964), tensor(0.9964), tensor(0.9964)]
+Max Accuracy: 0.9963892102241516
+Mean Accuracy: 0.9922875165939331
+False Negative Rate (FNR): 0.0072
+Error Rate (ER): 0.0036
+Recall: 0.9928
+F1 Score: 0.9957
+
+Model Type: LSTM
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.8973), tensor(0.9224), tensor(0.9415), tensor(0.9449), tensor(0.9536), tensor(0.9590), tensor(0.9615), tensor(0.9655), tensor(0.9661), tensor(0.9691)]
+Max Accuracy: 0.9691295623779297
+Mean Accuracy: 0.9480804204940796
+False Negative Rate (FNR): 0.0470
+Error Rate (ER): 0.0309
+Recall: 0.9530
+F1 Score: 0.9344
+
+Model Type: LSTM
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9602), tensor(0.9713), tensor(0.9725), tensor(0.9760), tensor(0.9790), tensor(0.9804), tensor(0.9816), tensor(0.9805), tensor(0.9839), tensor(0.9843)]
+Max Accuracy: 0.9843475222587585
+Mean Accuracy: 0.9769760966300964
+False Negative Rate (FNR): 0.0328
+Error Rate (ER): 0.0157
+Recall: 0.9672
+F1 Score: 0.9683
+
+Model Type: ANN
+Data Source: Seo
+Attack Type: DoS
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9919), tensor(0.9949), tensor(0.9962), tensor(0.9971), tensor(0.9968), tensor(0.9977), tensor(0.9974), tensor(0.9976), tensor(0.9978), tensor(0.9979)]
+Max Accuracy: 0.9978810548782349
+Mean Accuracy: 0.9965102076530457
+False Negative Rate (FNR): 0.0041
+Error Rate (ER): 0.0021
+Recall: 0.9959
+F1 Score: 0.9975
+
+Model Type: ANN
+Data Source: Seo
+Attack Type: Fuzz
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9501), tensor(0.9741), tensor(0.9832), tensor(0.9870), tensor(0.9830), tensor(0.9900), tensor(0.9902), tensor(0.9883), tensor(0.9894), tensor(0.9923)]
+Max Accuracy: 0.992335319519043
+Mean Accuracy: 0.9827640652656555
+False Negative Rate (FNR): 0.0232
+Error Rate (ER): 0.0077
+Recall: 0.9768
+F1 Score: 0.9833
+
+Model Type: ANN
+Data Source: Seo
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Latent Dimension: 100
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9630), tensor(0.9863), tensor(0.9873), tensor(0.9893), tensor(0.9907), tensor(0.9919), tensor(0.9923), tensor(0.9940), tensor(0.9949), tensor(0.9959)]
+Max Accuracy: 0.9958710074424744
+Mean Accuracy: 0.9885619282722473
+False Negative Rate (FNR): 0.0092
+Error Rate (ER): 0.0041
+Recall: 0.9908
+F1 Score: 0.9916

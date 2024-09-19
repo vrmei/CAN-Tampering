@@ -32,9 +32,9 @@ for index, row in tqdm(data.iterrows(), total=len(data)):
 
     # Parse the necessary values
     x = int(tempstr[2], 16)
-    payload = [int(tempstr[i], 16) for i in range(6, 13)]
+    payload = [int(tempstr[i], 16) for i in range(6, 14)]
     currow = [x] + payload
-    currow += '0'
+    currow += [0]
     totaldata.append(currow)
 
 # Convert totalcnt data to y_data
