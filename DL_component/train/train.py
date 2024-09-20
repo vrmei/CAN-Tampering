@@ -37,7 +37,7 @@ parser.add_argument("--model_type", type=str, default='Attn', help="which model 
 parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
-parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=1000, help="number of epochs of training")
 parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
 parser.add_argument("--lr", type=float, default=0.0001)
 opt = parser.parse_args()
@@ -60,7 +60,7 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    source_data = pd.read_csv('data/owndata/reshape/x_5.csv')
+    source_data = pd.read_csv('data/owndata/reshape/x_3_16.csv')
     datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -244,6 +244,7 @@ test_loss = []
 train_epochs_loss = []
 test_epochs_loss = []
 acc, nums = 0, 0
+maxF1 = 0
 for epoch in range(opt.n_epochs):
     acc = nums = 0
     train_epoch_loss = []
@@ -254,9 +255,9 @@ for epoch in range(opt.n_epochs):
             if opt.model_type == 'CNN':
                 data_x = data_x.view(batch_size, 1, 9, 9)
             elif opt.model_type == 'LSTM':
-                data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
+                data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
             elif opt.model_type == 'Attn':
-                data_x = data_x.view(batch_size, 81, 1) 
+                data_x = data_x.view(batch_size, data_x.shape[1], 1) 
         except Exception as e:
             print(f"Error reshaping data_x at batch {idx}: {e}")
             continue
@@ -292,9 +293,9 @@ for epoch in range(opt.n_epochs):
                 if opt.model_type == 'CNN':
                     data_x = data_x.view(batch_size, 1, 9, 9)
                 elif opt.model_type == 'LSTM':
-                    data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
+                    data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
                 elif opt.model_type == 'Attn':
-                    data_x = data_x.view(batch_size, 81, 1) 
+                    data_x = data_x.view(batch_size, data_x.shape[1], 1) 
             except Exception as e:
                 print(f"Error reshaping data_x at batch {idx}: {e}")
                 continue
@@ -331,6 +332,9 @@ for epoch in range(opt.n_epochs):
     print(f"Error Rate (ER): {ER:.4f}")
     print(f"Recall: {Recall:.4f}")
     print(f"F1 Score: {F1:.4f}")
+    if F1 > maxF1:
+        maxF1 = F1
+        torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model" + "F1:" + f"{F1:.4F}" + ".pth")
     test_epochs_loss.append(np.average(test_epochs_loss))
     test_acc.append((acc/nums))
 

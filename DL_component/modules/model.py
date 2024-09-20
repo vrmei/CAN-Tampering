@@ -47,9 +47,6 @@ class LSTMClassifier(nn.Module):
         return out
 
 
-import torch.nn as nn
-import torch
-
 class TransformerClassifier_noposition(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, embedding_dim=128, dropout=0.1):
         """

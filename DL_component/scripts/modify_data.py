@@ -287,32 +287,18 @@ class DataModifier:
             raise
 
     def plot_distributions_before_after(self, save_dir='plots'):
-        """Generate and save distribution plots before and after modifications."""
-        self.capture_distribution(before=True)
+        """Plot distributions before and after modifications without modifying data."""
         self.plot_distribution(before=True, save_dir=save_dir)
-
-        print("\nStarting data modifications...")
-        self.modify_data()
-
-        self.capture_distribution(before=False)
-        self.plot_distribution(before=False, save_dir=save_dir)
-
-    def capture_and_plot_distributions(self, save_dir='plots'):
-        """Capture and plot distributions before and after modifications."""
-        print("Capturing and plotting distribution before modifications...")
-        self.capture_distribution(before=True)
-        self.plot_distribution(before=True, save_dir=save_dir)
-
-        print("\nStarting data modifications...")
-        self.modify_data()
-
-        print("\nCapturing and plotting distribution after modifications...")
-        self.capture_distribution(before=False)
         self.plot_distribution(before=False, save_dir=save_dir)
 
     def generate_plots(self, save_dir='plots'):
-        """Generate and save distribution plots."""
+        """Generate and save distribution plots after modifications."""
         self.plot_distributions_before_after(save_dir=save_dir)
+
+    def plot_distributions_before_after(self, save_dir='plots'):
+        """Plot distributions before and after modifications without modifying data."""
+        self.plot_distribution(before=True, save_dir=save_dir)
+        self.plot_distribution(before=False, save_dir=save_dir)
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -344,25 +330,23 @@ def main():
     print("Reading data...")
     modifier.read_data()
 
-    print("\nCapturing and plotting distribution before modifications...")
+    print("\nCapturing distribution before modifications...")
     modifier.capture_distribution(before=True)
-    modifier.plot_distribution(before=True, save_dir=args.save_dir)
 
     print("\nStarting data modifications...")
     modifier.modify_data()
 
-    print("\nCapturing and plotting distribution after modifications...")
+    print("\nCapturing distribution after modifications...")
     modifier.capture_distribution(before=False)
-    modifier.plot_distribution(before=False, save_dir=args.save_dir)
+
+    print("\nPlotting and saving distribution plots...")
+    modifier.plot_distributions_before_after(save_dir=args.save_dir)
 
     print("\nSaving modified data...")
     modifier.save_data()
 
     print("\nLogging modification statistics...")
     modifier.log_statistics(args.log_file)
-
-    print("\nGenerating and saving distribution plots...")
-    modifier.generate_plots(save_dir=args.save_dir)
 
     print("\nData modification and logging completed successfully.")
 
