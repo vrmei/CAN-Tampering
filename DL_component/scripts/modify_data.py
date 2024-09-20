@@ -7,17 +7,20 @@ from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# Example usage:
+# python scripts/modify_data.py --input_file data/owndata/processed/white.csv --output_file data/owndata/attackdata/x_18.csv --x 50 --modify_type CANID
+
 class DataModifier:
     def __init__(self, input_file, output_file, x, modify_type='CANID', seed=42):
         """
-        初始化DataModifier类。
+        Initialize the DataModifier class.
 
         Parameters:
-        - input_file (str): 输入CSV文件路径。
-        - output_file (str): 输出CSV文件路径。
-        - x (int): 每隔x个报文修改一个报文。
-        - modify_type (str): 修改类型，'CANID'、'payload'或'Both'。
-        - seed (int): 随机种子，默认为42。
+        - input_file (str): Path to the input CSV file.
+        - output_file (str): Path to the output CSV file.
+        - x (int): Modify one message every x messages.
+        - modify_type (str): Type of modification: 'CANID', 'payload', or 'Both'.
+        - seed (int): Random seed for reproducibility.
         """
         self.input_file = input_file
         self.output_file = output_file
@@ -37,69 +40,102 @@ class DataModifier:
             'payload': defaultdict(Counter),
             'Total_Modifications': 0
         }
-        # 用于存储修改前后的分布
+        # To store distributions before and after modification
         self.distribution_before = {}
         self.distribution_after = {}
 
     def read_data(self):
-        """读取CSV数据集并初始化唯一值集合。"""
+        """Read the CSV dataset and initialize unique value sets."""
         try:
-            self.data = pd.read_csv(self.input_file, delimiter=' ', header=None)
+            self.data = pd.read_csv(self.input_file, header=None, delimiter=' ')
         except Exception as e:
-            print(f"读取文件时出错: {e}")
+            print(f"Error reading file: {e}")
             raise
 
-        # 确认数据集至少有10列（CANID + 8个payload + label）
-        print(self.data.shape)
+        # Ensure the dataset has at least 10 columns (CANID + 8 payloads + label)
         if self.data.shape[1] < 10:
-            raise ValueError("数据集的列数少于10列，请检查数据格式。")
+            raise ValueError("The dataset has fewer than 10 columns. Please check the data format.")
 
-        # 获取所有唯一的CANID
+        # Get all unique CANIDs
         self.unique_canids = self.data[self.canid_col].unique()
         if len(self.unique_canids) == 0:
-            raise ValueError("数据集中没有CANID，请检查数据。")
+            raise ValueError("No CANIDs found in the dataset. Please check the data.")
 
-        # 获取每个payload列的唯一值
+        # Get unique values for each payload column
         for col in self.payload_cols:
             self.unique_payloads[col] = self.data[col].unique()
 
-        print(f"共有 {len(self.unique_canids)} 个唯一的CANID。")
+        print(f"Total unique CANIDs: {len(self.unique_canids)}")
         for col in self.payload_cols:
-            print(f"Payload列 {col} 有 {len(self.unique_payloads[col])} 个唯一值。")
+            print(f"Payload column {col} has {len(self.unique_payloads[col])} unique values.")
+
+    def list_canids_with_counts(self):
+        """List all CANIDs along with their occurrence counts."""
+        canid_counts = self.data[self.canid_col].value_counts().sort_index()
+        print("\n=== CANID Counts ===")
+        for canid, count in canid_counts.items():
+            print(f"CANID {canid}: {count} occurrences")
+        print("=====================\n")
+        return canid_counts
+
+    def prompt_canid_selection(self):
+        """
+        Prompt the user to select one or more CANIDs for modification.
+
+        Returns:
+        - selected_canids (list): List of selected CANIDs.
+        """
+        canid_counts = self.list_canids_with_counts()
+        canid_list = canid_counts.index.tolist()
+
+        # Prompt user for input
+        while True:
+            user_input = input("Enter the CANIDs you want to modify (comma-separated), or 'all' to select all CANIDs: ").strip()
+            if user_input.lower() == 'all':
+                selected_canids = canid_list
+                break
+            else:
+                try:
+                    selected_canids = [int(cid.strip()) for cid in user_input.split(',')]
+                    # Validate selected CANIDs
+                    invalid_canids = [cid for cid in selected_canids if cid not in canid_list]
+                    if invalid_canids:
+                        print(f"Invalid CANIDs entered: {invalid_canids}. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid input. Please enter CANIDs as integers separated by commas, or 'all'.")
+                    continue
+
+        print(f"Selected CANIDs for modification: {selected_canids}")
+        return selected_canids
 
     def capture_distribution(self, before=True):
         """
-        捕获当前数据集的CANID和payload分布。
+        Capture the current distribution of CANIDs and payloads.
 
         Parameters:
-        - before (bool): 如果为True，捕获修改前的分布；否则，捕获修改后的分布。
+        - before (bool): If True, capture the distribution before modification; else, after modification.
         """
         prefix = 'before' if before else 'after'
-        self.distribution_before = {} if before else self.distribution_before
-        self.distribution_after = {} if not before else self.distribution_after
+        distribution = self.distribution_before if before else self.distribution_after
 
-        # CANID分布
+        # CANID distribution
         canid_counts = self.data[self.canid_col].value_counts().sort_index()
-        if before:
-            self.distribution_before['CANID'] = canid_counts
-        else:
-            self.distribution_after['CANID'] = canid_counts
+        distribution['CANID'] = canid_counts
 
-        # payload分布
+        # Payload distribution
         for col in self.payload_cols:
             payload_counts = self.data[col].value_counts().sort_index()
-            if before:
-                self.distribution_before[f'Payload_{col}'] = payload_counts
-            else:
-                self.distribution_after[f'Payload_{col}'] = payload_counts
+            distribution[f'Payload_{col}'] = payload_counts
 
     def plot_distribution(self, before=True, save_dir='plots'):
         """
-        生成并保存CANID和payload的分布图。
+        Generate and save distribution plots for CANIDs and payloads.
 
         Parameters:
-        - before (bool): 如果为True，生成修改前的分布图；否则，生成修改后的分布图。
-        - save_dir (str): 保存图像的目录。
+        - before (bool): If True, plot the distribution before modification; else, after modification.
+        - save_dir (str): Directory to save the plots.
         """
         prefix = 'before' if before else 'after'
         distribution = self.distribution_before if before else self.distribution_after
@@ -118,114 +154,126 @@ class DataModifier:
             plot_filename = f"{prefix}_{key}_distribution.png"
             plt.savefig(os.path.join(save_dir, plot_filename))
             plt.close()
-            print(f"保存分布图: {os.path.join(save_dir, plot_filename)}")
+            print(f"Saved distribution plot: {os.path.join(save_dir, plot_filename)}")
 
-    def modify_canid(self, modify_idx):
-        """修改指定索引的CANID，并记录统计信息。"""
-        current_canid = self.data.at[modify_idx, self.canid_col]
-        new_canid = random.choice(self.unique_canids)
-        
-        # 确保新的CANID与当前不同
-        if new_canid == current_canid:
-            possible_canids = self.unique_canids[self.unique_canids != current_canid]
-            if len(possible_canids) > 0:
+    def modify_canid(self, selected_canids, modify_indices, target_canid=None):
+        """
+        Modify the CANID of specified indices.
+
+        Parameters:
+        - selected_canids (list): List of CANIDs selected for modification.
+        - modify_indices (list): List of indices to modify.
+        - target_canid (int, optional): Specific CANID to assign. If None, assign a random different CANID.
+        """
+        for idx in modify_indices:
+            current_canid = self.data.at[idx, self.canid_col]
+            if target_canid is not None:
+                new_canid = target_canid
+                if new_canid == current_canid:
+                    print(f"Index {idx}: Target CANID is the same as current. Skipping modification.")
+                    continue
+            else:
+                # Choose a new CANID different from the current one
+                possible_canids = self.unique_canids[self.unique_canids != current_canid]
+                if len(possible_canids) == 0:
+                    print(f"Only one unique CANID ({current_canid}) present. Skipping modification at index {idx}.")
+                    continue
                 new_canid = random.choice(possible_canids)
-            else:
-                print(f"只有一个唯一的CANID: {current_canid}, 无需修改。")
-                return
 
-        # 修改CANID
-        self.data.at[modify_idx, self.canid_col] = new_canid
-        # 设置标签为1
-        self.data.at[modify_idx, self.label_col] = 1
+            # Modify CANID
+            self.data.at[idx, self.canid_col] = new_canid
+            # Set label to 1
+            self.data.at[idx, self.label_col] = 1
 
-        # 记录统计
-        self.statistics['CANID'][new_canid] += 1
-        self.statistics['Total_Modifications'] += 1
+            # Record statistics
+            self.statistics['CANID'][new_canid] += 1
+            self.statistics['Total_Modifications'] += 1
 
-        print(f"修改CANID - 报文索引: {modify_idx}, 原CANID: {current_canid}, 新CANID: {new_canid}, 标签设置为1.")
+            print(f"Modified CANID at index {idx}: {current_canid} -> {new_canid}, label set to 1.")
 
-    def modify_payload(self, modify_idx):
-        """修改指定索引的一个payload值，并记录统计信息。"""
-        # 随机选择一个payload列
-        payload_to_modify = random.choice(self.payload_cols)
-        current_payload = self.data.at[modify_idx, payload_to_modify]
-        new_payload = random.choice(self.unique_payloads[payload_to_modify])
+    def modify_payload_based_on_canid(self, modify_indices):
+        """
+        Modify the payload of specified indices based on their CANID.
 
-        # 确保新的payload值与当前不同
-        if new_payload == current_payload:
-            possible_payloads = self.unique_payloads[payload_to_modify][self.unique_payloads[payload_to_modify] != current_payload]
-            if len(possible_payloads) > 0:
+        Parameters:
+        - modify_indices (list): List of indices to modify.
+        """
+        for idx in modify_indices:
+            current_canid = self.data.at[idx, self.canid_col]
+            # Example logic: Modify payload based on CANID
+            # This can be customized as per specific requirements
+            payload_to_modify = random.choice(self.payload_cols)
+            current_payload = self.data.at[idx, payload_to_modify]
+            new_payload = random.choice(self.unique_payloads[payload_to_modify])
+
+            # Ensure the new payload is different
+            if new_payload == current_payload:
+                possible_payloads = self.unique_payloads[payload_to_modify][self.unique_payloads[payload_to_modify] != current_payload]
+                if len(possible_payloads) == 0:
+                    print(f"Payload column {payload_to_modify} has only one unique value. Skipping modification at index {idx}.")
+                    continue
                 new_payload = random.choice(possible_payloads)
-            else:
-                print(f"Payload列 {payload_to_modify} 只有一个唯一值: {current_payload}, 无需修改。")
-                return
 
-        # 修改payload
-        self.data.at[modify_idx, payload_to_modify] = new_payload
-        # 设置标签为1
-        self.data.at[modify_idx, self.label_col] = 1
+            # Modify payload
+            self.data.at[idx, payload_to_modify] = new_payload
+            # Set label to 1
+            self.data.at[idx, self.label_col] = 1
 
-        # 记录统计
-        self.statistics['payload'][payload_to_modify][new_payload] += 1
-        self.statistics['Total_Modifications'] += 1
+            # Record statistics
+            self.statistics['payload'][payload_to_modify][new_payload] += 1
+            self.statistics['Total_Modifications'] += 1
 
-        print(f"修改payload - 报文索引: {modify_idx}, Payload列: {payload_to_modify}, 原值: {current_payload}, 新值: {new_payload}, 标签设置为1.")
+            print(f"Modified payload at index {idx}: Column {payload_to_modify}, {current_payload} -> {new_payload}, label set to 1.")
 
     def modify_data(self):
-        """执行数据集的修改操作。"""
-        total_messages = len(self.data)
-        num_modifications = total_messages // self.x
+        """Perform the dataset modification."""
+        # Prompt user to select CANIDs to modify
+        selected_canids = self.prompt_canid_selection()
 
-        print(f"总报文数: {total_messages}, 每隔 {self.x} 个报文修改一个, 需要修改的报文数: {num_modifications}")
-        print(f"修改类型: {self.modify_type}")
+        # Find all indices for the selected CANIDs
+        target_indices = self.data[self.data[self.canid_col].isin(selected_canids)].index.tolist()
+        total_targets = len(target_indices)
 
-        for i in range(num_modifications):
-            start_idx = i * self.x
-            end_idx = start_idx + self.x
-            if end_idx > total_messages:
-                end_idx = total_messages
+        if total_targets == 0:
+            print("No messages found with the selected CANIDs. No modifications will be made.")
+            return
 
-            window = self.data.iloc[start_idx:end_idx]
-            modify_idx = window.sample(n=1, random_state=self.seed + i).index[0]
+        print(f"Total messages with selected CANIDs: {total_targets}")
 
-            if self.modify_type == 'CANID':
-                self.modify_canid(modify_idx)
-            elif self.modify_type == 'payload':
-                self.modify_payload(modify_idx)
-            elif self.modify_type == 'Both':
-                # 随机选择修改CANID或payload
-                choice = random.choice(['CANID', 'payload'])
-                if choice == 'CANID':
-                    self.modify_canid(modify_idx)
-                else:
-                    self.modify_payload(modify_idx)
-            else:
-                raise ValueError(f"未知的修改类型: {self.modify_type}")
+        # Determine which indices to modify: every x-th occurrence
+        modify_indices = target_indices[::self.x]
+        num_modifications = len(modify_indices)
+        print(f"Number of modifications to perform: {num_modifications}")
+
+        if self.modify_type in ['CANID', 'Both']:
+            self.modify_canid(selected_canids, modify_indices)
+
+        if self.modify_type in ['payload', 'Both']:
+            self.modify_payload_based_on_canid(modify_indices)
 
     def save_data(self):
-        """保存修改后的数据集。"""
+        """Save the modified dataset."""
         try:
             self.data.to_csv(self.output_file, header=False, index=False)
-            print(f"修改后的数据已保存到 {self.output_file}")
+            print(f"Modified data saved to {self.output_file}")
         except Exception as e:
-            print(f"保存文件时出错: {e}")
+            print(f"Error saving file: {e}")
             raise
 
     def log_statistics(self, log_file="modification_statistics.txt"):
-        """记录修改统计信息到日志文件。"""
+        """Log modification statistics to a file."""
         try:
             with open(log_file, "a") as f:
                 f.write(f"\nModification Statistics for {self.output_file}\n")
                 f.write(f"Modify Type: {self.modify_type}\n")
                 f.write(f"Total Modifications: {self.statistics['Total_Modifications']}\n\n")
-                
+
                 if self.modify_type in ['CANID', 'Both']:
                     f.write("CANID Modifications:\n")
                     for canid, count in self.statistics['CANID'].items():
                         f.write(f"  CANID {canid}: {count} times\n")
                     f.write("\n")
-                
+
                 if self.modify_type in ['payload', 'Both']:
                     f.write("Payload Modifications:\n")
                     for payload_col, changes in self.statistics['payload'].items():
@@ -233,53 +281,56 @@ class DataModifier:
                         for value, count in changes.items():
                             f.write(f"    Value {value}: {count} times\n")
                     f.write("\n")
-            print(f"修改统计信息已记录到 {log_file}")
+            print(f"Modification statistics logged to {log_file}")
         except Exception as e:
-            print(f"记录统计信息时出错: {e}")
+            print(f"Error logging statistics: {e}")
             raise
 
     def plot_distributions_before_after(self, save_dir='plots'):
-        """生成并保存修改前后的分布图。"""
+        """Generate and save distribution plots before and after modifications."""
+        self.capture_distribution(before=True)
         self.plot_distribution(before=True, save_dir=save_dir)
+
+        print("\nStarting data modifications...")
+        self.modify_data()
+
         self.capture_distribution(before=False)
         self.plot_distribution(before=False, save_dir=save_dir)
 
     def capture_and_plot_distributions(self, save_dir='plots'):
-        """捕获并绘制修改前后的分布图。"""
-        print("捕获修改前的分布...")
+        """Capture and plot distributions before and after modifications."""
+        print("Capturing and plotting distribution before modifications...")
         self.capture_distribution(before=True)
         self.plot_distribution(before=True, save_dir=save_dir)
 
-        print("开始修改数据...")
+        print("\nStarting data modifications...")
         self.modify_data()
 
-        print("捕获修改后的分布...")
+        print("\nCapturing and plotting distribution after modifications...")
         self.capture_distribution(before=False)
         self.plot_distribution(before=False, save_dir=save_dir)
 
     def generate_plots(self, save_dir='plots'):
-        """生成修改前后的分布图。"""
-        # 修改前已经被捕获并绘制
-        # 修改后需要再次捕获和绘制
+        """Generate and save distribution plots."""
         self.plot_distributions_before_after(save_dir=save_dir)
 
 def parse_arguments():
-    """解析命令行参数。"""
-    parser = argparse.ArgumentParser(description="修改数据集中的CANID或payload，并设置标签。")
-    parser.add_argument("--input_file", type=str, default='data/owndata/processed/white.csv',required=True, help="输入CSV文件路径。")
-    parser.add_argument("--output_file", type=str, default='data/owndata/attackdata', required=True, help="输出CSV文件路径。")
-    parser.add_argument("--x", type=int, default=100, required=True, help="每隔x个报文修改一个报文。")
-    parser.add_argument("--modify_type", type=str, choices=['CANID', 'payload', 'Both'], default='CANID', help="修改类型: 'CANID'、'payload' 或 'Both'。")
-    parser.add_argument("--seed", type=int, default=42, help="随机种子，默认值为42。")
-    parser.add_argument("--log_file", type=str, default="modification_statistics.txt", help="统计信息日志文件路径。")
-    parser.add_argument("--save_dir", type=str, default="plots", help="分布图保存目录。")
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Modify CANID or payload in the dataset and set labels.")
+    parser.add_argument("--input_file", type=str, required=True, help="Path to the input CSV file.")
+    parser.add_argument("--output_file", type=str, required=True, help="Path to the output CSV file.")
+    parser.add_argument("--x", type=int, required=True, help="Modify one message every x messages.")
+    parser.add_argument("--modify_type", type=str, choices=['CANID', 'payload', 'Both'], default='CANID', help="Type of modification: 'CANID', 'payload', or 'Both'.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
+    parser.add_argument("--log_file", type=str, default="modification_statistics.txt", help="Path to the modification statistics log file.")
+    parser.add_argument("--save_dir", type=str, default="plots", help="Directory to save distribution plots.")
     return parser.parse_args()
 
 def main():
     args = parse_arguments()
 
     if not os.path.isfile(args.input_file):
-        print(f"输入文件不存在: {args.input_file}")
+        print(f"Input file does not exist: {args.input_file}")
         return
 
     modifier = DataModifier(
@@ -290,30 +341,30 @@ def main():
         seed=args.seed
     )
 
-    print("开始读取数据...")
+    print("Reading data...")
     modifier.read_data()
 
-    print("捕获并绘制修改前的分布图...")
+    print("\nCapturing and plotting distribution before modifications...")
     modifier.capture_distribution(before=True)
     modifier.plot_distribution(before=True, save_dir=args.save_dir)
 
-    print("开始修改数据...")
+    print("\nStarting data modifications...")
     modifier.modify_data()
 
-    print("捕获并绘制修改后的分布图...")
+    print("\nCapturing and plotting distribution after modifications...")
     modifier.capture_distribution(before=False)
     modifier.plot_distribution(before=False, save_dir=args.save_dir)
 
-    print("保存修改后的数据...")
+    print("\nSaving modified data...")
     modifier.save_data()
 
-    print("记录统计信息...")
+    print("\nLogging modification statistics...")
     modifier.log_statistics(args.log_file)
 
-    print("生成并保存修改前后的分布图...")
+    print("\nGenerating and saving distribution plots...")
     modifier.generate_plots(save_dir=args.save_dir)
 
-    print("数据修改和统计完成。")
+    print("\nData modification and logging completed successfully.")
 
 if __name__ == "__main__":
     main()

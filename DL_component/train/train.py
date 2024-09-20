@@ -33,13 +33,12 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='ANN', help="which model will be used (KNN, CNN, Attn, DecisionTree, ANN, LSTM)")
-parser.add_argument("--data_src", type=str, default='Seo', help="the dataset name")
+parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used (KNN, CNN, Attn, DecisionTree, ANN, LSTM)")
+parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
-parser.add_argument("--propotion", type=float, default=0.6, help="the count of train divided by the count of whole")
-parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of training")
+parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
+parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of training")
 parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
-parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
 parser.add_argument("--lr", type=float, default=0.0001)
 opt = parser.parse_args()
 print(opt)
@@ -61,20 +60,8 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    if opt.attack_type == 'DoS':
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
-
-    elif opt.attack_type == 'Fuzz':
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
-
-    elif opt.attack_type == 'Gear':
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
+    source_data = pd.read_csv('data/owndata/reshape/x_5.csv')
+    datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -91,10 +78,20 @@ class GetDataset(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-train_data = source_data.iloc[:datalen, :]
-train_label = source_label.iloc[:datalen, :]
-test_data = source_data.iloc[datalen:, :]
-test_label = source_label.iloc[datalen:, :]
+
+if opt.data_src == 'Seo':
+    train_data = source_data.iloc[:datalen, :]
+    train_label = source_label.iloc[:datalen, :]
+    test_data = source_data.iloc[datalen:, :]
+    test_label = source_label.iloc[datalen:, :]
+elif opt.data_src == 'own':
+    train_data = source_data.iloc[:datalen,:]
+    test_data = source_data.iloc[datalen:,:]
+    train_label = train_data.iloc[:, -1]     # 最后一列作为标签
+    test_label = test_data.iloc[:, -1]     # 最后一列作为标签
+    train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
+    test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
+    
 
 torch_data_train = GetDataset(train_data, train_label)
 torch_data_test = GetDataset(test_data, test_label)
@@ -230,7 +227,7 @@ elif opt.model_type == 'LSTM':
     model = LSTMClassifier(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
 
 elif opt.model_type == 'Attn':
-    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=opt.n_classes).to(device)
+    model = TransformerClassifier_noposition(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
 
 else:
     raise ValueError("Invalid model_type specified.")
@@ -258,13 +255,16 @@ for epoch in range(opt.n_epochs):
                 data_x = data_x.view(batch_size, 1, 9, 9)
             elif opt.model_type == 'LSTM':
                 data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
+            elif opt.model_type == 'Attn':
+                data_x = data_x.view(batch_size, 81, 1) 
         except Exception as e:
             print(f"Error reshaping data_x at batch {idx}: {e}")
             continue
 
         data_x = data_x.to(torch.float32).to(device)
-        data_y = data_y.squeeze(1).to(torch.long).to(device)
-
+        if opt.data_src == 'Seo':
+            data_y = data_y.squeeze(1).to(torch.long)
+        data_y = data_y.to(device)
         outputs = model(data_x)
         optimizer.zero_grad()
         loss = criterion(outputs, data_y)
@@ -293,12 +293,15 @@ for epoch in range(opt.n_epochs):
                     data_x = data_x.view(batch_size, 1, 9, 9)
                 elif opt.model_type == 'LSTM':
                     data_x = data_x.view(batch_size, -1, 81)  # Adjust shape for LSTM
+                elif opt.model_type == 'Attn':
+                    data_x = data_x.view(batch_size, 81, 1) 
             except Exception as e:
                 print(f"Error reshaping data_x at batch {idx}: {e}")
                 continue
             data_x = data_x.to(torch.float32).to(device)
-            data_y = data_y.squeeze(1).to(torch.long).to(device)
-
+            if opt.data_src == 'Seo':
+                data_y = data_y.squeeze(1).to(torch.long).to(device)
+            data_y = data_y.to(device)
             outputs = model(data_x)
             loss = criterion(outputs, data_y)
             test_epochs_loss.append(loss.item())
@@ -338,7 +341,6 @@ Attack Type: {opt.attack_type}
 Training Proportion: {opt.propotion}
 Number of Epochs: {opt.n_epochs}
 Number of Classes: {opt.n_classes}
-Latent Dimension: {opt.latent_dim}
 Learning Rate: {opt.lr}
 
 Final Accuracy: {test_acc}

@@ -459,3 +459,96 @@ False Negative Rate (FNR): 0.0092
 Error Rate (ER): 0.0041
 Recall: 0.9908
 F1 Score: 0.9916
+
+Model Type: Attn
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 10
+Number of Classes: 2
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.5085), tensor(0.5116), tensor(0.5162), tensor(0.5054), tensor(0.5026), tensor(0.5204), tensor(0.5115), tensor(0.5196), tensor(0.5203), tensor(0.5199)]
+Max Accuracy: 0.5203853845596313
+Mean Accuracy: 0.5136058926582336
+False Negative Rate (FNR): 0.1710
+Error Rate (ER): 0.4801
+Recall: 0.8290
+F1 Score: 0.6333
+
+Model Type: Attn
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 100
+Number of Classes: 2
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.5000), tensor(0.5028), tensor(0.5265), tensor(0.5221), tensor(0.5251), tensor(0.5235), tensor(0.5274), tensor(0.5204), tensor(0.5303), tensor(0.5240), tensor(0.5274), tensor(0.5258), tensor(0.5321), tensor(0.5288), tensor(0.5260), tensor(0.5220), tensor(0.5294), tensor(0.5250), tensor(0.5267), tensor(0.5327), tensor(0.5271), tensor(0.5280), tensor(0.5283), tensor(0.5281), tensor(0.5313), tensor(0.5300), tensor(0.5257), tensor(0.5275), tensor(0.5274), tensor(0.5227), tensor(0.5347), tensor(0.5241), tensor(0.5317), tensor(0.5226), tensor(0.5281), tensor(0.5237), tensor(0.5306), tensor(0.5272), tensor(0.5250), tensor(0.5266), tensor(0.5308), tensor(0.5276), tensor(0.5278), tensor(0.5305), tensor(0.5295), tensor(0.5263), tensor(0.5315), tensor(0.5301), tensor(0.5278), tensor(0.5275), tensor(0.5280), tensor(0.5261), tensor(0.5242), tensor(0.5278), tensor(0.5273), tensor(0.5256), tensor(0.5251), tensor(0.5237), tensor(0.5247), tensor(0.5309), tensor(0.5223), tensor(0.5216), tensor(0.5218), tensor(0.5238), tensor(0.5226), tensor(0.5285), tensor(0.5249), tensor(0.5249), tensor(0.5211), tensor(0.5243), tensor(0.5276), tensor(0.5226), tensor(0.5235), tensor(0.5229), tensor(0.5253), tensor(0.5264), tensor(0.5267), tensor(0.5264), tensor(0.5182), tensor(0.5191), tensor(0.5209), tensor(0.5236), tensor(0.5208), tensor(0.5239), tensor(0.5251), tensor(0.5246), tensor(0.5211), tensor(0.5212), tensor(0.5173), tensor(0.5199), tensor(0.5190), tensor(0.5184), tensor(0.5236), tensor(0.5157), tensor(0.5199), tensor(0.5194), tensor(0.5162), tensor(0.5190), tensor(0.5173), tensor(0.5145)]
+Max Accuracy: 0.534661054611206
+Mean Accuracy: 0.5245647430419922
+False Negative Rate (FNR): 0.4532
+Error Rate (ER): 0.4855
+Recall: 0.5468
+F1 Score: 0.5297
+
+Model Type: CNN
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.6
+Number of Epochs: 20
+Number of Classes: 2
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101), tensor(0.9101)]
+Max Accuracy: 0.9101163148880005
+Mean Accuracy: 0.9101163148880005
+False Negative Rate (FNR): 1.0000
+Error Rate (ER): 0.0899
+Recall: 0.0000
+F1 Score: 0.0000
+
+Model Type: KNN
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 77.44%
+False Negative Rate (FNR): 0.9062
+Error Rate (ER): 0.2256
+Recall: 0.0938
+F1 Score: 0.1296
+
+Model Type: Attn
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Epochs: 20
+Number of Classes: 2
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.9175), tensor(0.9214), tensor(0.9203), tensor(0.9209), tensor(0.9188), tensor(0.9140), tensor(0.9101), tensor(0.9194), tensor(0.9167), tensor(0.9192), tensor(0.9174), tensor(0.9161), tensor(0.9152), tensor(0.9159), tensor(0.9142), tensor(0.9112), tensor(0.9176), tensor(0.9208), tensor(0.9111), tensor(0.9176)]
+Max Accuracy: 0.9213958382606506
+Mean Accuracy: 0.9167724847793579
+False Negative Rate (FNR): 0.6647
+Error Rate (ER): 0.0824
+Recall: 0.3353
+F1 Score: 0.3878
+
+Model Type: Attn
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Epochs: 20
+Number of Classes: 2
+Learning Rate: 0.0001
+
+Final Accuracy: [tensor(0.7261), tensor(0.8599), tensor(0.9206), tensor(0.8187), tensor(0.9118), tensor(0.9142), tensor(0.8944), tensor(0.9299), tensor(0.9038), tensor(0.8994), tensor(0.8723), tensor(0.8918), tensor(0.9022), tensor(0.8831), tensor(0.8947), tensor(0.8410), tensor(0.8893), tensor(0.9120), tensor(0.8554), tensor(0.8736)]
+Max Accuracy: 0.929855465888977
+Mean Accuracy: 0.8797085881233215
+False Negative Rate (FNR): 0.6224
+Error Rate (ER): 0.1264
+Recall: 0.3776
+F1 Score: 0.3173

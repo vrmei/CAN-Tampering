@@ -3,3 +3,18 @@ Model Type: Attn
 Data Source: Seo
 Attack Type: DoS
 Final Accuracy: 0.9945945739746094
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 0.41839972138404846
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 0.4209845960140228
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 0.4950064718723297

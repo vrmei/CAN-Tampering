@@ -28,11 +28,13 @@ torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
 
+# python train/eval.py --model_path output/AttnSeomodel.pth
+
 # 参数解析
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", type=str, required=True, help="path to the saved model")
-parser.add_argument("--model_type", type=str, default='SVM', help="which model will be used(KNN, CNN, Attn, SVM)")
-parser.add_argument("--data_src", type=str, default='Seo', help="the dataset name")
+parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used(KNN, CNN, Attn, SVM)")
+parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
 parser.add_argument("--n_classes", type=int, default=2, help="how many classes have")
@@ -57,20 +59,8 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    if opt.attack_type == 'DoS': 
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
-
-    elif opt.attack_type == 'Fuzz': 
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
-
-    elif opt.attack_type == 'gear': 
-        source_data = pd.read_csv('gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('gear_label.csv')
+    source_data = pd.read_csv('data/owndata/reshape/x_18.csv')
+    datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -87,11 +77,18 @@ class GetDataset(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-# 分割数据集
-train_data = source_data.iloc[:datalen,:]
-train_label = source_label.iloc[:datalen,:]
-test_data = source_data.iloc[datalen:,:]
-test_label = source_label.iloc[datalen:,:]
+if opt.data_src == 'Seo':
+    train_data = source_data.iloc[:datalen, :]
+    train_label = source_label.iloc[:datalen, :]
+    test_data = source_data.iloc[datalen:, :]
+    test_label = source_label.iloc[datalen:, :]
+elif opt.data_src == 'own':
+    train_data = source_data.iloc[:datalen,:]
+    test_data = source_data.iloc[datalen:,:]
+    train_label = train_data.iloc[:, -1]     # 最后一列作为标签
+    test_label = test_data.iloc[:, -1]     # 最后一列作为标签
+    train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
+    test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
 
 torch_data_test = GetDataset(test_data, test_label)
 testdataloader = data.DataLoader(torch_data_test, batch_size=32, shuffle=False)
@@ -102,7 +99,9 @@ if opt.model_type == 'CNN':
 elif opt.model_type == 'KNN':
     model = KNeighborsClassifier()
 elif opt.model_type == 'Attn':
-    model = torch.load(opt.model_path).to(device)
+    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=opt.n_classes)  # 这里需要替换为实际的模型类
+    model.load_state_dict(torch.load(opt.model_path))  # 加载模型参数
+    model.to(device)  # 将模型转移到指定设备
 elif opt.model_type == 'SVM':
     model = SVC(kernel='linear', C=1.0)
 else:
@@ -110,7 +109,7 @@ else:
 
 
 # SVM 评估过程
-if opt.model_type == 'SVM' or opt.model_type == 'KNN':
+if opt.model_type == 'KNN':
     train_data = np.array(train_data.values, dtype='float32')
     test_data = np.array(test_data.values, dtype='float32')
     train_label = np.array(train_label.values, dtype='float32').flatten()
@@ -143,7 +142,6 @@ else:
 
             data_x = data_x.to(torch.float32).to(device)
             data_y = data_y.to(torch.long).to(device)
-            data_y = data_y.squeeze(1)
 
             outputs = model(data_x)
             predicts = torch.where(outputs[:,1] > 0.5, 1, 0)

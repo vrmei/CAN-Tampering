@@ -47,56 +47,91 @@ class LSTMClassifier(nn.Module):
         return out
 
 
+import torch.nn as nn
+import torch
+
 class TransformerClassifier_noposition(nn.Module):
-    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, dropout=0.1):
+    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, embedding_dim=128, dropout=0.1):
         """
-        初始化Transformer分类模型，不使用词嵌入层，使用线性层直接处理输入特征
+        初始化Transformer分类模型，不使用位置编码，加入Batch Normalization层并优化结构
         :param input_dim: 输入特征的维度（如图像或时间序列的特征维度）
         :param num_heads: 多头自注意力机制中的头数
         :param num_layers: Transformer Encoder层的数量
         :param hidden_dim: Transformer中的隐藏层维度
         :param num_classes: 分类的类别数量
+        :param embedding_dim: 嵌入维度
         :param dropout: Dropout比率
         """
         super(TransformerClassifier_noposition, self).__init__()
 
-        # 输入线性投影：将输入的维度 input_dim 映射到 Transformer 的 hidden_dim
-        self.input_projection = nn.Linear(input_dim, hidden_dim)
+        # 嵌入层：将 input_dim 映射到 embedding_dim
+        self.embedding = nn.Linear(input_dim, embedding_dim)
+
+        # BatchNorm层
+        self.batch_norm_input = nn.BatchNorm1d(embedding_dim)
+
         self.dropout = nn.Dropout(dropout)
 
         # Transformer Encoder
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=hidden_dim,
+            d_model=embedding_dim,
             nhead=num_heads,
             dim_feedforward=hidden_dim * 4,
-            dropout=dropout
+            dropout=dropout,
+            activation='relu'  # 使用ReLU激活函数
         )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
 
+        # BatchNorm在Transformer之后
+        self.batch_norm_transformer = nn.BatchNorm1d(embedding_dim)
+
         # 分类器
-        self.fc = nn.Linear(hidden_dim, num_classes)
+        self.fc = nn.Sequential(
+            nn.Linear(embedding_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.BatchNorm1d(hidden_dim // 2),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
 
     def forward(self, x):
         """
         前向传播
-        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim)
+        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim=1)
         :return: 分类结果
         """
-        # 投影到 Transformer 的 hidden_dim
-        x = x.unsqueeze(1)
-        x = self.input_projection(x)  # (batch_size, seq_len, hidden_dim)
+        batch_size, seq_len, input_dim = x.size()
+
+        # 嵌入层
+        x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
+        x = x.view(batch_size * seq_len, -1)  # (batch_size*seq_len, embedding_dim)
+        x = self.batch_norm_input(x)         # BatchNorm
+        x = torch.relu(x)                    # 激活函数
         x = self.dropout(x)
+        x = x.view(batch_size, seq_len, -1) # (batch_size, seq_len, embedding_dim=128)
 
         # Transformer 编码
-        x = self.transformer_encoder(x)
+        # Transformer期望的输入形状为 (seq_len, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
+        x = self.transformer_encoder(x)  # (seq_len, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
 
-        # 池化：可以用平均池化或只取第一个token（CLS token）的输出
-        x = x.mean(dim=1)  # 平均池化
+        # Transformer之后的BatchNorm
+        x = x.reshape(batch_size * seq_len, -1)  # (batch_size*seq_len, embedding_dim)
+        x = self.batch_norm_transformer(x)      # BatchNorm
+        x = torch.relu(x)                       # 激活函数
+        x = x.view(batch_size, seq_len, -1)    # (batch_size, seq_len, embedding_dim)
 
-        # 全连接层进行分类
-        output = self.fc(x)
+        # 池化：平均池化
+        x = x.mean(dim=1)  # (batch_size, embedding_dim)
+
+        # 分类器进行分类
+        output = self.fc(x)  # (batch_size, num_classes)
 
         return output
+
+
+
 
 class CNN(nn.Module):
     def __init__(self) -> None:
