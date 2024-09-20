@@ -37,7 +37,7 @@ parser.add_argument("--model_type", type=str, default='Attn', help="which model 
 parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
-parser.add_argument("--n_epochs", type=int, default=1000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=10000, help="number of epochs of training")
 parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
 parser.add_argument("--lr", type=float, default=0.0001)
 opt = parser.parse_args()
