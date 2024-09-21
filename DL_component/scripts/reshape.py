@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import os
 
-# python scripts/reshape.py --input_file data/owndata/attackdata/x_3.csv --output_file data/owndata/reshape/x_3_16.csv --group_size 16
+# python scripts/reshape.py --input_file data/owndata/attackdata/1_x_4.csv --output_file data/owndata/reshape/x_3_16.csv --group_size 16
 
 def parse_arguments():
     """解析命令行参数。"""

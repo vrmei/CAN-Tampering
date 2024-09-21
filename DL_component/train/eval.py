@@ -33,7 +33,7 @@ random.seed(seed)
 # 参数解析
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_path", type=str, required=True, help="path to the saved model")
-parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used(KNN, CNN, Attn, SVM)")
+parser.add_argument("--model_type", type=str, default='KNN', help="which model will be used(KNN, CNN, Attn, SVM)")
 parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='DoS', help="which attack in: DoS, Fuzz or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divide the count of whole")
@@ -59,7 +59,7 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    source_data = pd.read_csv('data/owndata/reshape/x_18.csv')
+    source_data = pd.read_csv('data/owndata/reshape/1_x_4_16.csv')
     datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -89,17 +89,21 @@ elif opt.data_src == 'own':
     test_label = test_data.iloc[:, -1]     # 最后一列作为标签
     train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
     test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
-
+source_label = source_data.iloc[:, -1]
 torch_data_test = GetDataset(test_data, test_label)
 testdataloader = data.DataLoader(torch_data_test, batch_size=32, shuffle=False)
+torch_data_train = GetDataset(source_data, source_label)
+traindataloader = data.DataLoader(torch_data_train, batch_size=32, shuffle=False)
 
 # 加载模型
 if opt.model_type == 'CNN':
-    model = torch.load(opt.model_path).to(device)
+    model = CNN().to(device)
+    model.load_state_dict(torch.load(opt.model_path))  # 加载模型参数
+    model.to(device)  # 将模型转移到指定设备
 elif opt.model_type == 'KNN':
     model = KNeighborsClassifier()
 elif opt.model_type == 'Attn':
-    model = TransformerClassifier_noposition(input_dim=81, num_heads=8, num_layers=2, hidden_dim=32, num_classes=opt.n_classes)  # 这里需要替换为实际的模型类
+    model = TransformerClassifier_noposition(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes)  # 这里需要替换为实际的模型类
     model.load_state_dict(torch.load(opt.model_path))  # 加载模型参数
     model.to(device)  # 将模型转移到指定设备
 elif opt.model_type == 'SVM':
@@ -136,10 +140,14 @@ else:
     acc, nums = 0, 0
 
     with torch.no_grad():
-        for idx, (data_x, data_y) in enumerate(testdataloader):
+        for idx, (data_x, data_y) in enumerate(traindataloader):
+            batch_size = data_x.size(0)
             if opt.model_type == 'CNN':
-                data_x = np.reshape(data_x, (32,1,9,9))
-
+                data_x = data_x.view(batch_size, 1, 9, 9)
+            elif opt.model_type == 'LSTM':
+                data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
+            elif opt.model_type == 'Attn':
+                data_x = data_x.view(batch_size, data_x.shape[1], 1) 
             data_x = data_x.to(torch.float32).to(device)
             data_y = data_y.to(torch.long).to(device)
 

@@ -47,10 +47,48 @@ class LSTMClassifier(nn.Module):
         return out
 
 
-class TransformerClassifier_noposition(nn.Module):
-    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, embedding_dim=128, dropout=0.1):
+import torch
+import torch.nn as nn
+import math
+
+class PositionalEncodingWithDecay(nn.Module):
+    def __init__(self, max_seq_len, embedding_dim, decay_interval=9, decay_factor=0.9):
+        super(PositionalEncodingWithDecay, self).__init__()
+        
+        self.max_seq_len = max_seq_len
+        self.embedding_dim = embedding_dim
+        self.decay_interval = decay_interval
+        self.decay_factor = decay_factor
+        
+        pe = torch.zeros(max_seq_len, embedding_dim)
+        position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-math.log(10000.0) / embedding_dim))
+        
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        
+        decay_steps = torch.floor(position / decay_interval).long()
+        decay = decay_factor ** decay_steps.float()
+        
+        pe = pe * decay
+        
+        self.register_buffer('pe', pe)
+    
+    def forward(self, x):
+        batch_size, seq_len, embedding_dim = x.size()
+        if seq_len > self.max_seq_len:
+            raise ValueError(f"Sequence length {seq_len} exceeds maximum {self.max_seq_len}")
+        
+        pe = self.pe[:seq_len, :].unsqueeze(0).repeat(batch_size, 1, 1)
+        x = x + pe
+        return x
+
+class TransformerClassifier_WithPositionalEncoding(nn.Module):
+    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
+                 embedding_dim=128, dropout=0.1, max_seq_len=500):
         """
-        初始化Transformer分类模型，不使用位置编码，加入Batch Normalization层并优化结构
+        初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
+        
         :param input_dim: 输入特征的维度（如图像或时间序列的特征维度）
         :param num_heads: 多头自注意力机制中的头数
         :param num_layers: Transformer Encoder层的数量
@@ -58,14 +96,23 @@ class TransformerClassifier_noposition(nn.Module):
         :param num_classes: 分类的类别数量
         :param embedding_dim: 嵌入维度
         :param dropout: Dropout比率
+        :param max_seq_len: 序列的最大长度，用于位置编码
         """
-        super(TransformerClassifier_noposition, self).__init__()
+        super(TransformerClassifier_WithPositionalEncoding, self).__init__()
 
         # 嵌入层：将 input_dim 映射到 embedding_dim
         self.embedding = nn.Linear(input_dim, embedding_dim)
 
-        # BatchNorm层
-        self.batch_norm_input = nn.BatchNorm1d(embedding_dim)
+        # 位置编码
+        self.positional_encoding = PositionalEncodingWithDecay(
+            max_seq_len=max_seq_len,
+            embedding_dim=embedding_dim,
+            decay_interval=9,
+            decay_factor=0.9
+        )
+
+        # LayerNorm层
+        self.layer_norm_input = nn.LayerNorm(embedding_dim)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -79,14 +126,11 @@ class TransformerClassifier_noposition(nn.Module):
         )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
 
-        # BatchNorm在Transformer之后
-        self.batch_norm_transformer = nn.BatchNorm1d(embedding_dim)
-
         # 分类器
         self.fc = nn.Sequential(
             nn.Linear(embedding_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.BatchNorm1d(hidden_dim // 2),
+            nn.LayerNorm(hidden_dim // 2),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, num_classes)
         )
@@ -94,30 +138,27 @@ class TransformerClassifier_noposition(nn.Module):
     def forward(self, x):
         """
         前向传播
-        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim=1)
+        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim)
         :return: 分类结果
         """
         batch_size, seq_len, input_dim = x.size()
 
         # 嵌入层
         x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
-        x = x.view(batch_size * seq_len, -1)  # (batch_size*seq_len, embedding_dim)
-        x = self.batch_norm_input(x)         # BatchNorm
-        x = torch.relu(x)                    # 激活函数
+
+        # 添加位置编码
+        x = self.positional_encoding(x)  # (batch_size, seq_len, embedding_dim=128)
+
+        # LayerNorm
+        x = self.layer_norm_input(x)  # (batch_size, seq_len, embedding_dim=128)
+        x = torch.relu(x)              # 激活函数
         x = self.dropout(x)
-        x = x.view(batch_size, seq_len, -1) # (batch_size, seq_len, embedding_dim=128)
 
         # Transformer 编码
         # Transformer期望的输入形状为 (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
         x = self.transformer_encoder(x)  # (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
-
-        # Transformer之后的BatchNorm
-        x = x.reshape(batch_size * seq_len, -1)  # (batch_size*seq_len, embedding_dim)
-        x = self.batch_norm_transformer(x)      # BatchNorm
-        x = torch.relu(x)                       # 激活函数
-        x = x.view(batch_size, seq_len, -1)    # (batch_size, seq_len, embedding_dim)
 
         # 池化：平均池化
         x = x.mean(dim=1)  # (batch_size, embedding_dim)
@@ -126,6 +167,8 @@ class TransformerClassifier_noposition(nn.Module):
         output = self.fc(x)  # (batch_size, num_classes)
 
         return output
+
+
 
 
 

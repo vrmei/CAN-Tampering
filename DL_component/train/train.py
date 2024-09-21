@@ -23,7 +23,7 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
-from modules.model import TransformerClassifier_noposition, CNN, KNN, ANN, LSTMClassifier  # Import ANN and LSTM models
+from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, ANN, LSTMClassifier  # Import ANN and LSTM models
 import random
 
 seed = 42
@@ -60,7 +60,7 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    source_data = pd.read_csv('data/owndata/reshape/x_3_16.csv')
+    source_data = pd.read_csv('data/owndata/reshape/1_x_4_16.csv')
     datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -227,7 +227,7 @@ elif opt.model_type == 'LSTM':
     model = LSTMClassifier(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
 
 elif opt.model_type == 'Attn':
-    model = TransformerClassifier_noposition(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
+    model = TransformerClassifier_WithPositionalEncoding(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
 
 else:
     raise ValueError("Invalid model_type specified.")
@@ -235,7 +235,10 @@ else:
 if opt.loss_type == 'MSE':
     criterion = torch.nn.MSELoss()
 elif opt.loss_type == 'CE':
-    criterion = torch.nn.CrossEntropyLoss()
+    if opt.data_src == 'own':
+        weights = [1.0, 1.5]
+        class_weights = torch.FloatTensor(weights).to(device)
+    criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
 
 test_acc = []
@@ -334,7 +337,7 @@ for epoch in range(opt.n_epochs):
     print(f"F1 Score: {F1:.4f}")
     if F1 > maxF1:
         maxF1 = F1
-        torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model" + "F1:" + f"{F1:.4F}" + ".pth")
+        torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model" + "F1" + f"{F1:.2F}" + ".pth")
     test_epochs_loss.append(np.average(test_epochs_loss))
     test_acc.append((acc/nums))
 

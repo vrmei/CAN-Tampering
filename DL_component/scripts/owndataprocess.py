@@ -4,7 +4,7 @@ from collections import Counter
 from tqdm import tqdm
 
 # Load data, skipping the first 3 rows and renaming the column to 'col'
-filename = 'white.asc'
+filename = 'white1.asc'
 data = pd.read_csv(f'data/owndata/origin/{filename}', skiprows=4, names=['col'])
 
 total_y_data = []

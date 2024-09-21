@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Example usage:
-# python scripts/modify_data.py --input_file data/owndata/processed/white.csv --output_file data/owndata/attackdata/x_18.csv --x 50 --modify_type CANID
+# python scripts/modify_data.py --input_file data/owndata/processed/white1.csv --output_file data/owndata/attackdata/1_x_4.csv --x 4 --modify_type CANID
 
 class DataModifier:
     def __init__(self, input_file, output_file, x, modify_type='CANID', seed=42):
