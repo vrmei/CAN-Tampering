@@ -16,30 +16,31 @@ def process_file(file_path):
     """
     totaldata = []
     try:
-        # 读取文件，跳过前4行，指定列名为 'col'
-        data = pd.read_csv(file_path, skiprows=4, names=['col'], delimiter='\n', encoding='utf-8')
+        with open(file_path, 'r', encoding='utf-8') as f:
+            # 跳过前4行
+            for _ in range(4):
+                next(f)
+            
+            # 逐行读取文件内容
+            for line_number, line in enumerate(tqdm(f, desc=f"Processing {os.path.basename(file_path)}"), 1):
+                tempstr = line.strip().split()
+                
+                # 确保 tempstr 有 14 个元素，不足的用 '00' 填充
+                if len(tempstr) < 14:
+                    tempstr += ['00'] * (14 - len(tempstr))
+                
+                try:
+                    # 解析需要的值
+                    x = int(tempstr[2], 16)
+                    payload = [int(tempstr[i], 16) for i in range(6, 14)]
+                    currow = [x] + payload + [0]
+                    totaldata.append(currow)
+                except ValueError:
+                    print(f"警告：文件 {file_path} 的第 {line_number + 4} 行存在无效的十六进制数，跳过该行。")
+                except IndexError:
+                    print(f"警告：文件 {file_path} 的第 {line_number + 4} 行字段不足，跳过该行。")
     except Exception as e:
         print(f"错误：无法读取文件 {file_path}，错误信息: {e}")
-        return totaldata
-    
-    # 遍历每一行数据
-    for index, row in tqdm(data.iterrows(), total=len(data), desc=f"处理文件 {os.path.basename(file_path)}"):
-        tempstr = row['col'].split()
-        
-        # 确保 tempstr 有 14 个元素，不足的用 '00' 填充
-        if len(tempstr) < 14:
-            tempstr += ['00'] * (14 - len(tempstr))
-        
-        try:
-            # 解析需要的值
-            x = int(tempstr[2], 16)
-            payload = [int(tempstr[i], 16) for i in range(6, 14)]
-            currow = [x] + payload + [0]
-            totaldata.append(currow)
-        except ValueError as ve:
-            print(f"警告：文件 {file_path} 的第 {index + 1} 行存在无效的十六进制数，跳过该行。")
-        except IndexError as ie:
-            print(f"警告：文件 {file_path} 的第 {index + 1} 行字段不足，跳过该行。")
     
     return totaldata
 
@@ -69,7 +70,7 @@ def process_all_files(input_dir, output_dir, output_filename='merged_data.csv'):
     all_data = []
     
     # 遍历并处理每个文件
-    for file_path in tqdm(file_list, desc="处理所有文件"):
+    for file_path in tqdm(file_list, desc="Processing all files"):
         file_data = process_file(file_path)
         all_data.extend(file_data)
     

@@ -64,7 +64,7 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    source_data = pd.read_csv('data/owndata/reshape/1_x_4_16.csv')
+    source_data = pd.read_csv('data/owndata/reshape/1_x_2_16.csv')
     datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

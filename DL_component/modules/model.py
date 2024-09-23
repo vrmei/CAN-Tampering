@@ -193,7 +193,7 @@ class BERT(nn.Module):
             max_seq_len=max_seq_len,
             embedding_dim=embedding_dim,
             decay_interval=9,
-            decay_factor=1.0
+            decay_factor=0.9
         )
 
         # LayerNorm层
