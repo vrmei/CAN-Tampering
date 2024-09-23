@@ -552,3 +552,16 @@ False Negative Rate (FNR): 0.6224
 Error Rate (ER): 0.1264
 Recall: 0.3776
 F1 Score: 0.3173
+
+Model Type: KNN
+Data Source: own
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 80.10%
+False Negative Rate (FNR): 0.8379
+Error Rate (ER): 0.1990
+Recall: 0.1621
+F1 Score: 0.2086

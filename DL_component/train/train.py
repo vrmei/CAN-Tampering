@@ -23,8 +23,11 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
-from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, ANN, LSTMClassifier  # Import ANN and LSTM models
+from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, ANN, LSTMClassifier, BERT  # Import BERTClassifier
 import random
+
+# 需要导入tokenizer
+from transformers import BertTokenizer
 
 seed = 42
 torch.manual_seed(seed)
@@ -33,13 +36,14 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='Attn', help="which model will be used (KNN, CNN, Attn, DecisionTree, ANN, LSTM)")
+parser.add_argument("--model_type", type=str, default='BERT', help="which model will be used (KNN, CNN, BERT ,Attn, DecisionTree, ANN, LSTM)")
 parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
 parser.add_argument("--n_epochs", type=int, default=10000, help="number of epochs of training")
 parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
 parser.add_argument("--lr", type=float, default=0.0001)
+parser.add_argument("--freeze_bert", action='store_true', help="Whether to freeze BERT parameters")
 opt = parser.parse_args()
 print(opt)
 
@@ -66,18 +70,35 @@ elif opt.data_src == 'own':
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class GetDataset(data.Dataset):
-    def __init__(self, data_root, data_label):
-        self.data = data_root.values.astype(np.float32)
+    def __init__(self, data_root, data_label, tokenizer=None, max_length=128):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.data = data_root.values.astype(str) if tokenizer else data_root.values.astype(np.float32)
         self.label = data_label.values.astype(np.int64)
 
     def __getitem__(self, index):
-        data = self.data[index]
-        label = self.label[index]
-        return data, label
+        if self.tokenizer:
+            # 假设每行数据可以被视为一个句子
+            encoded = self.tokenizer.encode_plus(
+                self.data[index],
+                add_special_tokens=True,
+                max_length=self.max_length,
+                padding='max_length',
+                truncation=True,
+                return_attention_mask=True,
+                return_tensors='pt',
+            )
+            input_ids = encoded['input_ids'].squeeze(0)  # [max_length]
+            attention_mask = encoded['attention_mask'].squeeze(0)  # [max_length]
+            label = self.label[index]
+            return input_ids, attention_mask, label
+        else:
+            data = self.data[index]
+            label = self.label[index]
+            return data, label
 
     def __len__(self):
         return len(self.data)
-
 
 if opt.data_src == 'Seo':
     train_data = source_data.iloc[:datalen, :]
@@ -91,7 +112,7 @@ elif opt.data_src == 'own':
     test_label = test_data.iloc[:, -1]     # 最后一列作为标签
     train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
     test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
-    
+
 
 torch_data_train = GetDataset(train_data, train_label)
 torch_data_test = GetDataset(test_data, test_label)
@@ -229,6 +250,10 @@ elif opt.model_type == 'LSTM':
 elif opt.model_type == 'Attn':
     model = TransformerClassifier_WithPositionalEncoding(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
 
+elif opt.model_type == 'BERT':
+    model = BERT(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
+
+
 else:
     raise ValueError("Invalid model_type specified.")
 
@@ -236,7 +261,7 @@ if opt.loss_type == 'MSE':
     criterion = torch.nn.MSELoss()
 elif opt.loss_type == 'CE':
     if opt.data_src == 'own':
-        weights = [1.0, 1.5]
+        weights = [1.0, 1.0]
         class_weights = torch.FloatTensor(weights).to(device)
     criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
@@ -252,31 +277,39 @@ for epoch in range(opt.n_epochs):
     acc = nums = 0
     train_epoch_loss = []
     model.train()
-    for idx, (data_x, data_y) in enumerate(traindataloader):
+    for idx, batch in enumerate(traindataloader):
         try:
+            data_x, data_y = batch
             batch_size = data_x.size(0)
             if opt.model_type == 'CNN':
-                data_x = data_x.view(batch_size, 1, 9, 9)
+                data_x = data_x.view(batch_size, 1, 12, 12)
             elif opt.model_type == 'LSTM':
                 data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
-            elif opt.model_type == 'Attn':
+            elif opt.model_type == 'Attn' or opt.model_type == 'BERT':
                 data_x = data_x.view(batch_size, data_x.shape[1], 1) 
+            data_x = data_x.to(torch.float32).to(device)
+            if opt.data_src == 'Seo':
+                data_y = data_y.squeeze(1).to(torch.long)
+            data_y = data_y.to(device)
         except Exception as e:
-            print(f"Error reshaping data_x at batch {idx}: {e}")
+            print(f"Error processing batch {idx}: {e}")
             continue
 
-        data_x = data_x.to(torch.float32).to(device)
-        if opt.data_src == 'Seo':
-            data_y = data_y.squeeze(1).to(torch.long)
-        data_y = data_y.to(device)
         outputs = model(data_x)
         optimizer.zero_grad()
         loss = criterion(outputs, data_y)
         loss.backward()
         optimizer.step()
-        _, predicts = torch.max(outputs, 1)
-        acc += (predicts == data_y).sum().cpu()
-        nums += data_y.size()[0]
+
+        if opt.model_type == 'BERT':
+            _, predicts = torch.max(outputs, 1)
+            acc += (predicts == data_y).sum().cpu()
+            nums += data_y.size(0)
+        else:
+            _, predicts = torch.max(outputs, 1)
+            acc += (predicts == data_y).sum().cpu()
+            nums += data_y.size()[0]
+
         train_epoch_loss.append(loss.item())
         train_loss.append(loss.item())
         if idx % max(1, (len(traindataloader)//100)) == 0:
@@ -290,29 +323,32 @@ for epoch in range(opt.n_epochs):
     tp, tn, fp, fn = 0, 0, 0, 0
     model.eval()
     with torch.no_grad():
-        for idx, (data_x, data_y) in enumerate(testdataloader):
+        for idx, batch in enumerate(testdataloader):
             try:
+                data_x, data_y = batch
                 batch_size = data_x.size(0)
                 if opt.model_type == 'CNN':
-                    data_x = data_x.view(batch_size, 1, 9, 9)
+                    data_x = data_x.view(batch_size, 1, 12, 12)
                 elif opt.model_type == 'LSTM':
                     data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
-                elif opt.model_type == 'Attn':
+                elif opt.model_type == 'Attn' or opt.model_type == 'BERT':
                     data_x = data_x.view(batch_size, data_x.shape[1], 1) 
+                data_x = data_x.to(torch.float32).to(device)
+                if opt.data_src == 'Seo':
+                    data_y = data_y.squeeze(1).to(torch.long)
+                data_y = data_y.to(device)
             except Exception as e:
-                print(f"Error reshaping data_x at batch {idx}: {e}")
+                print(f"Error processing batch {idx}: {e}")
                 continue
-            data_x = data_x.to(torch.float32).to(device)
-            if opt.data_src == 'Seo':
-                data_y = data_y.squeeze(1).to(torch.long).to(device)
-            data_y = data_y.to(device)
+
             outputs = model(data_x)
             loss = criterion(outputs, data_y)
             test_epochs_loss.append(loss.item())
             test_loss.append(loss.item())
+
             _, predicts = torch.max(outputs, 1)
             acc += (predicts == data_y).sum().cpu()
-            nums += data_y.size()[0]
+            nums += data_y.size(0)
 
             # Calculate confusion matrix components
             tp += ((predicts == 1) & (data_y == 1)).sum().item()
@@ -337,7 +373,10 @@ for epoch in range(opt.n_epochs):
     print(f"F1 Score: {F1:.4f}")
     if F1 > maxF1:
         maxF1 = F1
-        torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model" + "F1" + f"{F1:.2F}" + ".pth")
+        if opt.model_type == 'BERT':
+            torch.save(model.state_dict(), f"./output/{opt.model_type}_{opt.data_src}_model_F1_{F1:.2f}.pth")
+        else:
+            torch.save(model.state_dict(), f"./output/{opt.model_type}{opt.data_src}modelF1{F1:.2F}.pth")
     test_epochs_loss.append(np.average(test_epochs_loss))
     test_acc.append((acc/nums))
 
@@ -367,4 +406,7 @@ print(f"False Negative Rate (FNR): {FNR}")
 print(f"Error Rate (ER): {ER}")
 print(f"Recall: {Recall}")
 print(f"F1 Score: {F1}")
-torch.save(model.state_dict(), "./output/" + opt.model_type + opt.data_src + "model.pth")
+if opt.model_type == 'BERT':
+    torch.save(model.state_dict(), f"./output/{opt.model_type}_{opt.data_src}_model.pth")
+else:
+    torch.save(model.state_dict(), f"./output/{opt.model_type}{opt.data_src}model.pth")

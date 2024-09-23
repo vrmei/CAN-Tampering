@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import Counter
+from transformers import BertModel, BertConfig
+import math
 
 class ANN(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes):
@@ -45,11 +47,6 @@ class LSTMClassifier(nn.Module):
         out = out[:, -1, :]  # (batch_size, hidden_dim)
         out = self.fc(out)
         return out
-
-
-import torch
-import torch.nn as nn
-import math
 
 class PositionalEncodingWithDecay(nn.Module):
     def __init__(self, max_seq_len, embedding_dim, decay_interval=9, decay_factor=0.9):
@@ -108,7 +105,7 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
             max_seq_len=max_seq_len,
             embedding_dim=embedding_dim,
             decay_interval=9,
-            decay_factor=0.9
+            decay_factor=1.0
         )
 
         # LayerNorm层
@@ -171,6 +168,95 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
 
 
 
+class BERT(nn.Module):
+    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
+                 embedding_dim=128, dropout=0.1, max_seq_len=500):
+        """
+        初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
+        
+        :param input_dim: 输入特征的维度（如图像或时间序列的特征维度）
+        :param num_heads: 多头自注意力机制中的头数
+        :param num_layers: Transformer Encoder层的数量
+        :param hidden_dim: Transformer中的隐藏层维度
+        :param num_classes: 分类的类别数量
+        :param embedding_dim: 嵌入维度
+        :param dropout: Dropout比率
+        :param max_seq_len: 序列的最大长度，用于位置编码
+        """
+        super(BERT, self).__init__()
+
+        # 嵌入层：将 input_dim 映射到 embedding_dim
+        self.embedding = nn.Linear(input_dim, embedding_dim)
+
+        # 位置编码
+        self.positional_encoding = PositionalEncodingWithDecay(
+            max_seq_len=max_seq_len,
+            embedding_dim=embedding_dim,
+            decay_interval=9,
+            decay_factor=1.0
+        )
+
+        # LayerNorm层
+        self.layer_norm_input = nn.LayerNorm(embedding_dim)
+
+        self.dropout = nn.Dropout(dropout)
+
+        # 定义8个相同的Transformer Encoder层
+        self.encoder_layers = nn.ModuleList([
+            nn.TransformerEncoderLayer(
+                d_model=embedding_dim,
+                nhead=num_heads,
+                dim_feedforward=hidden_dim * 4,
+                dropout=dropout,
+                activation='relu'  # 使用ReLU激活函数
+            )
+            for _ in range(8)  # 连接8个相同的Encoder层
+        ])
+
+        # 分类器
+        self.fc = nn.Sequential(
+            nn.Linear(embedding_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_dim // 2),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
+
+    def forward(self, x):
+        """
+        前向传播
+        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim)
+        :return: 分类结果
+        """
+        batch_size, seq_len, input_dim = x.size()
+
+        # 嵌入层
+        x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
+
+        # 添加位置编码
+        x = self.positional_encoding(x)  # (batch_size, seq_len, embedding_dim=128)
+
+        # LayerNorm
+        x = self.layer_norm_input(x)  # (batch_size, seq_len, embedding_dim=128)
+        x = torch.relu(x)              # 激活函数
+        x = self.dropout(x)
+
+        # Transformer 编码
+        # Transformer期望的输入形状为 (seq_len, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
+        for encoder in self.encoder_layers:
+            x = encoder(x)  # (seq_len, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
+
+        # 池化：平均池化
+        x = x.mean(dim=1)  # (batch_size, embedding_dim)
+
+        # 分类器进行分类
+        output = self.fc(x)  # (batch_size, num_classes)
+
+        return output
+
+
 
 
 class CNN(nn.Module):
@@ -197,7 +283,7 @@ class CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2),
         )
         self.output = nn.Sequential(
-            nn.Linear(in_features=128, out_features=2),
+            nn.Linear(in_features=288, out_features=2),
             nn.Sigmoid()
         )
         
