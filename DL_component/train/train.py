@@ -23,11 +23,13 @@ import torch.nn.functional as F
 import torch
 
 from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
-from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, ANN, LSTMClassifier, BERT  # Import BERTClassifier
+from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, MLP, LSTMClassifier, BERT  # Import BERTClassifier
 import random
 
 # 需要导入tokenizer
 from transformers import BertTokenizer
+
+# CUDA_VISIBLE_DEVICES=1 python train/train.py
 
 seed = 42
 torch.manual_seed(seed)
@@ -36,7 +38,7 @@ random.seed(seed)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='BERT', help="which model will be used (KNN, CNN, BERT ,Attn, DecisionTree, ANN, LSTM)")
+parser.add_argument("--model_type", type=str, default='MLP', help="which model will be used (KNN, CNN, BERT ,Attn, DecisionTree, MLP, LSTM)")
 parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
 parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
 parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
@@ -47,6 +49,7 @@ parser.add_argument("--freeze_bert", action='store_true', help="Whether to freez
 opt = parser.parse_args()
 print(opt)
 
+path = 'data/owndata/attackdata/1_x_2_all.csv'
 if opt.data_src == 'Seo':
     if opt.attack_type == 'DoS':
         source_data = pd.read_csv('data/CNN_data/DoS_data.csv')
@@ -64,7 +67,7 @@ if opt.data_src == 'Seo':
         source_label = pd.read_csv('data/CNN_data/gear_label.csv')
 
 elif opt.data_src == 'own':
-    source_data = pd.read_csv('data/owndata/reshape/1_x_2_16.csv')
+    source_data = pd.read_csv(path)
     datalen = int(opt.propotion * len(source_data))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -117,12 +120,13 @@ elif opt.data_src == 'own':
 torch_data_train = GetDataset(train_data, train_label)
 torch_data_test = GetDataset(test_data, test_label)
 
-traindataloader = data.DataLoader(torch_data_train, batch_size=32, shuffle=True)
-testdataloader = data.DataLoader(torch_data_test, batch_size=32, shuffle=True)
+traindataloader = data.DataLoader(torch_data_train, batch_size=64, shuffle=True)
+testdataloader = data.DataLoader(torch_data_test, batch_size=64, shuffle=True)
 
 output_str = f"""
 Model Type: {opt.model_type}
 Data Source: {opt.data_src}
+Data Path: {path}
 Attack Type: {opt.attack_type}
 Training Proportion: {opt.propotion}
 Number of Classes: {opt.n_classes}
@@ -181,6 +185,7 @@ elif opt.model_type == 'KNN':
     with open("log.txt", "a") as f:
         f.write(output_str)
     print(f"Final Accuracy of KNN: {accuracy}")
+    print(f"Data path: {path}")
     print(f"False Negative Rate (FNR): {FNR}")
     print(f"Error Rate (ER): {ER}")
     print(f"Recall: {Recall}")
@@ -232,6 +237,7 @@ elif opt.model_type == 'DecisionTree':
     output_str += f'F1 Score: {F1:.4f}\n'
     with open("log.txt", "a") as f:
         f.write(output_str)
+    print(f"Data path: {path}")
     print(f"Final Accuracy of Decision Tree: {accuracy}")
     print(f"False Negative Rate (FNR): {FNR}")
     print(f"Error Rate (ER): {ER}")
@@ -239,16 +245,16 @@ elif opt.model_type == 'DecisionTree':
     print(f"F1 Score: {F1}")
     exit()
 
-elif opt.model_type == 'ANN':
-    # Assuming ANN is defined in modules.model
-    model = ANN(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
+elif opt.model_type == 'MLP':
+    # Assuming MLP is defined in modules.model
+    model = MLP(input_dim=9, hidden_dim=4096, num_classes=opt.n_classes).to(device)
 
 elif opt.model_type == 'LSTM':
     # Assuming LSTMClassifier is defined in modules.model
-    model = LSTMClassifier(input_dim=81, hidden_dim=64, num_classes=opt.n_classes).to(device)
+    model = LSTMClassifier(input_dim=144, hidden_dim=64, num_classes=opt.n_classes).to(device)
 
 elif opt.model_type == 'Attn':
-    model = TransformerClassifier_WithPositionalEncoding(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
+    model = TransformerClassifier_WithPositionalEncoding(input_dim=1, num_heads=8, num_layers=4, hidden_dim=1024, num_classes=opt.n_classes).to(device)
 
 elif opt.model_type == 'BERT':
     model = BERT(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
@@ -367,6 +373,7 @@ for epoch in range(opt.n_epochs):
 
     print("epoch= {}/{}, {}/{} of test, acc=".format(
         epoch, opt.n_epochs, idx, len(testdataloader)), "%.4f" % float(acc/nums))
+    print(f"Data path: {path}")
     print(f"False Negative Rate (FNR): {FNR:.4f}")
     print(f"Error Rate (ER): {ER:.4f}")
     print(f"Recall: {Recall:.4f}")

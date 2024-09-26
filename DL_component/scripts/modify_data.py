@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Example usage:
-# python scripts/modify_data.py --input_file data/owndata/processed/white1.csv --output_file data/owndata/attackdata/1_x_2.csv --x 2 --modify_type CANID
+# python scripts/modify_data.py --input_file data/owndata/processed/white1.csv --output_file data/owndata/attackdata/1_x_2_280.csv --x 2 --modify_type CANID
 
 class DataModifier:
     def __init__(self, input_file, output_file, x, modify_type='CANID', seed=42):
@@ -151,7 +151,7 @@ class DataModifier:
             plt.ylabel('Count')
             plt.xticks(rotation=45)
             plt.tight_layout()
-            plot_filename = f"{prefix}_{key}_distribution.png"
+            plot_filename = f"{prefix}_{key}_{args.x}_distribution.png"
             plt.savefig(os.path.join(save_dir, plot_filename))
             plt.close()
             print(f"Saved distribution plot: {os.path.join(save_dir, plot_filename)}")
@@ -311,9 +311,9 @@ def parse_arguments():
     parser.add_argument("--log_file", type=str, default="modification_statistics.txt", help="Path to the modification statistics log file.")
     parser.add_argument("--save_dir", type=str, default="plots", help="Directory to save distribution plots.")
     return parser.parse_args()
+args = parse_arguments()
 
 def main():
-    args = parse_arguments()
 
     if not os.path.isfile(args.input_file):
         print(f"Input file does not exist: {args.input_file}")

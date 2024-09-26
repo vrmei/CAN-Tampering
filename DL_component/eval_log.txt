@@ -73,3 +73,48 @@ Model Type: KNN
 Data Source: own
 Attack Type: DoS
 Final Accuracy: 0.818704
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 68.18%
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 68.02%
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 90.30%
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 59.53%
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 97.21%
+
+Model Type: Attn
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 62.79%
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 99.98%
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 99.98%
+
+Model Type: MLP
+Data Source: own
+Attack Type: DoS
+Final Accuracy: 95.16%

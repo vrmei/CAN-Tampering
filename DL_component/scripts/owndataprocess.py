@@ -3,6 +3,11 @@ import glob
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import argparse
+
+
+# python scripts/owndataprocess.py batch --input_dir ./data/owndata/origin/ --output_dir ./data/owndata/processed/ --output_file merged_data.csv
+
 
 def process_file(file_path):
     """
@@ -93,10 +98,70 @@ def process_all_files(input_dir, output_dir, output_filename='merged_data.csv'):
     print("示例数据（前5行）：")
     print(temparray[:5])
 
-if __name__ == "__main__":
-    # 定义输入和输出目录
-    input_directory = './data/owndata/origin/'      # 输入文件夹路径
-    output_directory = './data/owndata/processed/' # 输出文件夹路径
-    output_file = 'merged_data.csv'                 # 合并后的输出文件名
+def process_single_file(file_path, output_dir, output_filename=None):
+    """
+    处理单个 .asc 文件，并将结果保存到 CSV 文件中。
     
-    process_all_files(input_directory, output_directory, output_file)
+    参数:
+        file_path (str): .asc 文件的路径。
+        output_dir (str): 处理后 CSV 文件的输出文件夹路径。
+        output_filename (str, optional): 输出 CSV 文件的文件名。如果未提供，将基于输入文件名生成。
+    """
+    # 确保输出文件夹存在
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # 处理文件
+    print(f"开始处理单个文件: {file_path}")
+    file_data = process_file(file_path)
+    
+    if not file_data:
+        print("警告：没有任何数据被处理。")
+        return
+    
+    # 将数据转换为 numpy 数组，数据类型为 int16
+    temparray = np.array(file_data, dtype=np.int16)
+    
+    # 生成输出文件名
+    if not output_filename:
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        output_filename = f"{base_name}_processed.csv"
+    
+    # 保存为 CSV 文件
+    output_path = os.path.join(output_dir, output_filename)
+    try:
+        np.savetxt(output_path, temparray, fmt='%d', delimiter=',')
+        print(f"文件的数据已成功保存到 {output_path}")
+    except Exception as e:
+        print(f"错误：无法保存数据到 {output_path}，错误信息: {e}")
+    
+    # 可选：打印部分数据
+    print("示例数据（前5行）：")
+    print(temparray[:5])
+
+def main():
+    parser = argparse.ArgumentParser(description="处理 .asc 文件并转换为 CSV 格式。")
+    subparsers = parser.add_subparsers(dest='command', help='子命令帮助')
+
+    # 子命令：批量处理
+    parser_batch = subparsers.add_parser('batch', help='批量处理多个 .asc 文件')
+    parser_batch.add_argument('--input_dir', type=str, required=True, help='输入文件夹路径，包含 .asc 文件')
+    parser_batch.add_argument('--output_dir', type=str, required=True, help='输出文件夹路径')
+    parser_batch.add_argument('--output_file', type=str, default='merged_data.csv', help='合并后的输出 CSV 文件名')
+
+    # 子命令：单文件处理
+    parser_single = subparsers.add_parser('single', help='处理单个 .asc 文件')
+    parser_single.add_argument('--file', type=str, required=True, help='要处理的 .asc 文件路径')
+    parser_single.add_argument('--output_dir', type=str, required=True, help='输出文件夹路径')
+    parser_single.add_argument('--output_file', type=str, default=None, help='输出 CSV 文件名（可选）')
+
+    args = parser.parse_args()
+
+    if args.command == 'batch':
+        process_all_files(args.input_dir, args.output_dir, args.output_file)
+    elif args.command == 'single':
+        process_single_file(args.file, args.output_dir, args.output_file)
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()

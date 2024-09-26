@@ -565,3 +565,59 @@ False Negative Rate (FNR): 0.8379
 Error Rate (ER): 0.1990
 Recall: 0.1621
 F1 Score: 0.2086
+
+Model Type: KNN
+Data Source: own
+Data Path: data/owndata/reshape/1_x_2_297_16.csv
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 64.15%
+False Negative Rate (FNR): 0.7798
+Error Rate (ER): 0.3585
+Recall: 0.2202
+F1 Score: 0.2843
+
+Model Type: KNN
+Data Source: own
+Data Path: data/owndata/reshape/1_x_2_280_16.csv
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 66.32%
+False Negative Rate (FNR): 0.6167
+Error Rate (ER): 0.3368
+Recall: 0.3833
+F1 Score: 0.4240
+
+Model Type: DecisionTree
+Data Source: own
+Data Path: data/owndata/reshape/1_x_2_280_16.csv
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 80.92%
+False Negative Rate (FNR): 0.2942
+Error Rate (ER): 0.1908
+Recall: 0.7058
+F1 Score: 0.7053
+
+Model Type: DecisionTree
+Data Source: own
+Data Path: data/owndata/reshape/1_x_2_280_16.csv
+Attack Type: Gear
+Training Proportion: 0.8
+Number of Classes: 2
+
+
+Final Accuracy: 80.92%
+False Negative Rate (FNR): 0.2942
+Error Rate (ER): 0.1908
+Recall: 0.7058
+F1 Score: 0.7053

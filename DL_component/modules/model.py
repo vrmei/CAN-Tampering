@@ -5,26 +5,40 @@ from collections import Counter
 from transformers import BertModel, BertConfig
 import math
 
-class ANN(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_classes):
-        super(ANN, self).__init__()
+import torch.nn as nn
+
+class MLP(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_classes, dropout_prob=0.5):
+        super(MLP, self).__init__()
         # 定义第一个全连接层
         self.fc1 = nn.Linear(input_dim, hidden_dim)
+        # 定义第一个层归一化
+        self.ln1 = nn.LayerNorm(hidden_dim)
         # 定义第二个全连接层
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        # 定义第二个层归一化
+        self.ln2 = nn.LayerNorm(hidden_dim)
         # 定义输出层
         self.output_layer = nn.Linear(hidden_dim, num_classes)
         # 定义激活函数
         self.relu = nn.ReLU()
-    
+        # 定义 Dropout，概率可以在实例化时传递，默认值为 0.5
+        self.dropout = nn.Dropout(p=dropout_prob)
+        
     def forward(self, x):
-        # 前向传播：输入 -> 全连接层1 -> 激活函数 -> 全连接层2 -> 激活函数 -> 输出层
+        # 前向传播：
+        # 输入 -> 全连接层1 -> 层归一化1 -> ReLU -> Dropout -> 全连接层2 -> 层归一化2 -> ReLU -> Dropout -> 输出层
         out = self.fc1(x)
+        out = self.ln1(out)
         out = self.relu(out)
+        out = self.dropout(out)  # Apply Dropout after ReLU
         out = self.fc2(out)
+        out = self.ln2(out)
         out = self.relu(out)
+        out = self.dropout(out)  # Apply Dropout after ReLU
         out = self.output_layer(out)
         return out
+
 
 class LSTMClassifier(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes, num_layers=1):
@@ -82,7 +96,7 @@ class PositionalEncodingWithDecay(nn.Module):
 
 class TransformerClassifier_WithPositionalEncoding(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
-                 embedding_dim=128, dropout=0.1, max_seq_len=500):
+                 embedding_dim=128, dropout=0.1, max_seq_len=600):
         """
         初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
         
@@ -99,13 +113,12 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
 
         # 嵌入层：将 input_dim 映射到 embedding_dim
         self.embedding = nn.Linear(input_dim, embedding_dim)
-
         # 位置编码
         self.positional_encoding = PositionalEncodingWithDecay(
             max_seq_len=max_seq_len,
             embedding_dim=embedding_dim,
             decay_interval=9,
-            decay_factor=1.0
+            decay_factor=0.9
         )
 
         # LayerNorm层
@@ -170,7 +183,7 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
 
 class BERT(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
-                 embedding_dim=128, dropout=0.1, max_seq_len=500):
+                 embedding_dim=128, dropout=0.1, max_seq_len=600):
         """
         初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
         
