@@ -331,3 +331,384 @@ class KNN:
 
     def _euclidean_distance(self, x1, x2):
         return np.sqrt(np.sum((x1 - x2) ** 2))
+    
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class DeepConv1D_Attention(nn.Module):
+    def __init__(self, input_width, num_classes, embedding_dim=256, num_heads=8, hidden_dim=512, num_layers=4, dropout=0.2):
+        """
+        Model combining deep Conv1D (short and long distance) and Attention for feature extraction and classification.
+        
+        Args:
+        - input_width (int): Width of the input sequence (e.g., 900).
+        - num_classes (int): Number of output classes.
+        - embedding_dim (int): Dimension of embeddings for attention mechanism.
+        - num_heads (int): Number of attention heads.
+        - hidden_dim (int): Dimension of the feedforward layer in attention.
+        - num_layers (int): Number of Transformer layers.
+        - dropout (float): Dropout rate.
+        """
+        super(DeepConv1D_Attention, self).__init__()
+        
+        # Short-distance Conv1D with multiple layers
+        self.short_conv1d = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=16, kernel_size=9, stride=1, padding=0),  # Short filter
+            nn.ReLU(),
+            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2)  # Reduce width by half
+        )
+        
+        # Long-distance Conv1D with multiple layers
+        self.long_conv1d = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=16, kernel_size=90, stride=1, padding=0),  # Long filter
+            nn.ReLU(),
+            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2)  # Reduce width by half
+        )
+        
+        # Compute feature dimensions dynamically
+        short_out_dim = (input_width // 9 // 2) * 64  # Output size from short Conv1D
+        long_out_dim = ((input_width // 9 - 9 + 1) // 2) * 64  # Output size from long Conv1D
+        original_out_dim = input_width  # Flattened original input
+        
+        feature_dim = 900 #55364  # Total concatenated features
+        
+        # Linear layer to map concatenated features to embedding_dim
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(feature_dim, embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
+        
+        # Attention mechanism
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embedding_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim,
+            dropout=dropout,
+            activation='relu'
+        )
+        self.attention = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.Linear(embedding_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
+    
+    def forward(self, x):
+        """
+        Forward pass of the model.
+        
+        Args:
+        - x (torch.Tensor): Input tensor of shape (batch_size, width=900).
+        
+        Returns:
+        - torch.Tensor: Output logits of shape (batch_size, num_classes).
+        """
+        batch_size, width = x.shape  # Shape: (batch_size, 900)
+        x = x.unsqueeze(1)  # Add channel dimension: (batch_size, 1, 900)
+        
+        # Short-distance Conv1D
+        x_short = self.short_conv1d(x)  # Shape: (batch_size, 64, width/18)
+        x_short = x_short.view(batch_size, -1)  # Flatten: (batch_size, 64 * width/18)
+        
+        # Long-distance Conv1D
+        x_long = self.long_conv1d(x)  # Shape: (batch_size, 64, (width/9 - 9 + 1)/2)
+        x_long = x_long.view(batch_size, -1)  # Flatten: (batch_size, 64 * (width/9 - 9 + 1)/2)
+        
+        # Flatten input for concatenation
+        x_flat = x.view(batch_size, -1)  # Shape: (batch_size, 900)
+        
+        # Concatenate original, short, and long features
+        x_concat = torch.cat([x_flat, x_short, x_long], dim=1)  # Shape: (batch_size, feature_dim)
+        
+        # Linear projection to embedding_dim
+        x = self.embedding_layer(x_flat)  # Shape: (batch_size, embedding_dim)
+        x = x.unsqueeze(1)  # Add sequence dimension: (batch_size, seq_len=1, embedding_dim)
+        
+        # Attention
+        x = x.permute(1, 0, 2)  # Transformer expects (seq_len, batch_size, embedding_dim)
+        x = self.attention(x)  # Shape: (seq_len=1, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2).squeeze(1)  # Back to (batch_size, embedding_dim)
+        
+        # Classification
+        out = self.classifier(x)  # Shape: (batch_size, num_classes)
+        out = torch.softmax(out, dim=1)  # Convert logits to probabilities
+        return out
+
+
+class Conv1D_Attention_Advanced(nn.Module):
+    def __init__(self, input_width, num_classes, embedding_dim=256, num_heads=8, hidden_dim=512, num_layers=4, dropout=0.2):
+        """
+        Enhanced model combining Conv1D (short and long distance) and Attention for feature extraction and classification.
+        
+        Args:
+        - input_width (int): Width of the input sequence (e.g., 900).
+        - num_classes (int): Number of output classes.
+        - embedding_dim (int): Dimension of embeddings for attention mechanism.
+        - num_heads (int): Number of attention heads.
+        - hidden_dim (int): Dimension of the feedforward layer in attention.
+        - num_layers (int): Number of Transformer layers.
+        - dropout (float): Dropout rate.
+        """
+        super(Conv1D_Attention_Advanced, self).__init__()
+        
+        # Short-distance 1D Convolutional Layers
+        self.short_conv1d = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),  # Reduce width by half
+            nn.Dropout(dropout)
+        )
+        
+        # Long-distance 1D Convolutional Layers
+        self.long_conv1d = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=32, kernel_size=15, stride=1, padding=7),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=15, stride=1, padding=7),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2),  # Reduce width by half
+            nn.Dropout(dropout)
+        )
+        
+        # Linear layer to map concatenated features to embedding_dim
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(64 * (input_width // 2) + 64 * (input_width // 2), embedding_dim),
+            nn.LayerNorm(embedding_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
+        
+        # Attention mechanism
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embedding_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim,
+            dropout=dropout,
+            activation='relu'
+        )
+        self.attention = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        # Classification head with additional hidden layers
+        self.classifier = nn.Sequential(
+            nn.Linear(embedding_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim // 2, num_classes)
+        )
+    
+    def forward(self, x):
+        """
+        Forward pass of the model.
+        
+        Args:
+        - x (torch.Tensor): Input tensor of shape (batch_size, width=900).
+        
+        Returns:
+        - torch.Tensor: Output logits of shape (batch_size, num_classes).
+        """
+        batch_size, width = x.shape  # Shape: (batch_size, 900)
+        x = x.unsqueeze(1)  # Add a channel dimension for Conv1D (batch_size, 1, 900)
+        
+        # Short-distance 1D Convolution
+        x_short = self.short_conv1d(x)  # Shape: (batch_size, 64, width/2)
+        
+        # Long-distance 1D Convolution
+        x_long = self.long_conv1d(x)  # Shape: (batch_size, 64, width/2)
+        
+        # Flatten Conv1D outputs
+        x_short = x_short.view(batch_size, -1)  # Shape: (batch_size, 64 * width/2)
+        x_long = x_long.view(batch_size, -1)  # Shape: (batch_size, 64 * width/2)
+        
+        # Concatenate short and long 1D Conv features
+        x_concat = torch.cat([x_short, x_long], dim=1)  # Shape: (batch_size, 64 * width/2 + 64 * width/2)
+        
+        # Linear projection to embedding_dim
+        x = self.embedding_layer(x_concat)  # Shape: (batch_size, embedding_dim)
+        x = x.unsqueeze(1)  # Shape: (batch_size, seq_len=1, embedding_dim)
+        
+        # Attention
+        x = x.permute(1, 0, 2)  # Transformer expects (seq_len, batch_size, embedding_dim)
+        x = self.attention(x)  # Shape: (seq_len=1, batch_size, embedding_dim)
+        x = x.permute(1, 0, 2).squeeze(1)  # Back to (batch_size, embedding_dim)
+        
+        # Classification
+        out = self.classifier(x)  # Shape: (batch_size, num_classes)
+        return out
+
+# 旋转位置编码（ROPE）实现
+def rope_position_encoding(seq_len, dim):
+    position = torch.arange(0, seq_len, dtype=torch.float32).unsqueeze(1)  # (seq_len, 1)
+    div_term = torch.exp(torch.arange(0, dim, 2).float() * -(math.log(10000.0) / dim))  # (dim//2,)
+    pe = torch.zeros(seq_len, dim)
+    pe[:, 0::2] = torch.sin(position * div_term)  # Apply sine to even indices
+    pe[:, 1::2] = torch.cos(position * div_term)  # Apply cosine to odd indices
+    return pe.unsqueeze(0)  # Shape: (1, seq_len, dim)
+
+# 注意力机制实现
+class AttentionLayer(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_heads):
+        super(AttentionLayer, self).__init__()
+        self.attn = nn.MultiheadAttention(embed_dim=input_dim, num_heads=num_heads, batch_first=True)
+        self.fc = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, input_dim)
+        )
+        self.layer_norm = nn.LayerNorm(input_dim)
+
+    def forward(self, x):
+        # Self-attention layer
+        attn_output, _ = self.attn(x, x, x)
+        x = attn_output + x  # Residual connection
+        x = self.layer_norm(x)
+
+        # Feed-forward network
+        x = self.fc(x) + attn_output  # Residual connection
+        return x
+
+# 修改后的AttackDetectionModel
+class AttackDetectionModel(nn.Module):
+    def __init__(self, input_width=1, embed_dim=256, data_dim=8, hidden_dim=64, num_classes=4, dropout=0.2, num_heads=4):
+        super(AttackDetectionModel, self).__init__()
+
+        # Embedding layer for IDs
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(input_width, embed_dim),
+            nn.LayerNorm(embed_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
+        
+        # Multiple 1D convolutions for data
+        self.data_conv1 = nn.Conv1d(in_channels=data_dim, out_channels=hidden_dim, kernel_size=3, padding=1)
+        self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
+
+        # Attention Layer
+        self.attn_layer = AttentionLayer(input_dim=embed_dim + hidden_dim * 2, hidden_dim=hidden_dim, num_heads=num_heads)
+        
+        # Position encoding (ROPE)
+        self.pos_encoding = rope_position_encoding(100, embed_dim + hidden_dim * 2)  # Assume sequence length is 100
+        
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_dim * 2, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes)
+        )
+    
+    def forward(self, x):
+        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
+        x = x.view(x.size(0), 100, 9)
+        
+        # Split ID and data
+        id_data = x[:, :, 0]  # Shape: (batch_size, 100)
+        data = x[:, :, 1:]    # Shape: (batch_size, 100, 8)
+        
+        # Add an extra dimension to id_data for embedding
+        id_data = id_data.unsqueeze(-1)  # Shape: (batch_size, 100, 1)
+        
+        # Process ID with embedding
+        id_embed = self.embedding_layer(id_data)  # Shape: (batch_size, 100, embed_dim)
+        
+        # Process data with convolution
+        data = data.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
+        data_feat = F.relu(self.data_conv1(data))  # Shape: (batch_size, hidden_dim, 100)
+        data_feat = F.relu(self.data_conv2(data_feat))  # Shape: (batch_size, hidden_dim*2, 100)
+        data_feat = data_feat.permute(0, 2, 1)  # Change back to (batch_size, 100, hidden_dim*2)
+        
+        # Concatenate ID and data features
+        combined_feat = torch.cat((id_embed, data_feat), dim=-1)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
+        
+        # Add positional encoding (ROPE)
+        combined_feat = combined_feat + self.pos_encoding  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
+        
+        # Apply Attention
+        attention_out = self.attn_layer(combined_feat)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
+        
+        # Max pooling over sequence
+        pooled_feat = torch.max(attention_out, dim=1).values  # Shape: (batch_size, embed_dim + hidden_dim*2)
+        
+        # Classification
+        out = self.fc(pooled_feat)  # Shape: (batch_size, num_classes)
+        
+        return out
+    
+
+# class AttackDetectionModel(nn.Module):
+    def __init__(self, input_width=1, embed_dim=256, data_dim=8, hidden_dim=64, num_classes=4, dropout=0.2):
+        super(AttackDetectionModel, self).__init__()
+        # Embedding layer for IDs
+        self.embedding_layer = nn.Sequential(
+            nn.Linear(input_width, embed_dim),
+            nn.LayerNorm(embed_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
+        
+        # 1D convolution for data
+        self.data_conv = nn.Conv1d(in_channels=data_dim, out_channels=hidden_dim, kernel_size=3, padding=1)
+        
+        # LSTM for sequence modeling
+        self.lstm = nn.LSTM(input_size=embed_dim + hidden_dim, hidden_size=hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
+        
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_dim * 2, 64),
+            nn.ReLU(),
+            nn.Linear(64, num_classes)
+        )
+    
+    def forward(self, x):
+        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
+        x = x.view(x.size(0), 100, 9)
+        
+        # Split ID and data
+        id_data = x[:, :, 0]  # Shape: (batch_size, 100)
+        data = x[:, :, 1:]    # Shape: (batch_size, 100, 8)
+        
+        # Add an extra dimension to id_data for embedding
+        id_data = id_data.unsqueeze(-1)  # Shape: (batch_size, 100, 1)
+        
+        # Process ID with embedding
+        id_embed = self.embedding_layer(id_data)  # Shape: (batch_size, 100, embed_dim)
+        
+        # Process data with convolution
+        data = data.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
+        data_feat = F.relu(self.data_conv(data))  # Shape: (batch_size, hidden_dim, 100)
+        data_feat = data_feat.permute(0, 2, 1)  # Change back to (batch_size, 100, hidden_dim)
+        
+        # Concatenate ID and data features
+        combined_feat = torch.cat((id_embed, data_feat), dim=-1)  # Shape: (batch_size, 100, embed_dim + hidden_dim)
+        
+        # Sequence modeling with LSTM
+        lstm_out, _ = self.lstm(combined_feat)  # Shape: (batch_size, 100, hidden_dim * 2)
+        
+        # Max pooling over sequence
+        pooled_feat = torch.max(lstm_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)
+        
+        # Classification
+        out = self.fc(pooled_feat)  # Shape: (batch_size, num_classes)
+        
+        return out

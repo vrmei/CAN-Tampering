@@ -9,411 +9,183 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import argparse
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score
-from collections import Counter
-
-import torch.utils
-from torch.utils import data
-from torchvision import datasets
-
-import torch.nn as nn
-import torch.nn.functional as F
 import torch
-
-from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
-from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, MLP, LSTMClassifier, BERT  # Import BERTClassifier
+from torch.utils import data
+from torch import nn
 import random
-
-# 需要导入tokenizer
-from transformers import BertTokenizer
-
-# CUDA_VISIBLE_DEVICES=1 python train/train.py
-
+from tqdm import tqdm
+from modules.model import Conv1D_Attention_Advanced, DeepConv1D_Attention, AttackDetectionModel
+import logging
+from sklearn.model_selection import KFold
+from sklearn.utils.class_weight import compute_class_weight
+from torch.utils.data import Dataset, DataLoader
+# Set random seeds
 seed = 42
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
 
+# Setup logging
+log_file = "training_log.txt"
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s', 
+                    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)])
+
+# Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--loss_type", type=str, default='CE', help="the loss func(MSE, CE)")
-parser.add_argument("--model_type", type=str, default='MLP', help="which model will be used (KNN, CNN, BERT ,Attn, DecisionTree, MLP, LSTM)")
-parser.add_argument("--data_src", type=str, default='own', help="the dataset name")
-parser.add_argument("--attack_type", type=str, default='Gear', help="which attack in: DoS, Fuzz, or Gear")
-parser.add_argument("--propotion", type=float, default=0.8, help="the count of train divided by the count of whole")
-parser.add_argument("--n_epochs", type=int, default=10000, help="number of epochs of training")
-parser.add_argument("--n_classes", type=int, default=2, help="number of classes")
-parser.add_argument("--lr", type=float, default=0.0001)
-parser.add_argument("--freeze_bert", action='store_true', help="Whether to freeze BERT parameters")
+parser.add_argument("--loss_type", type=str, default='CE', help="Loss function type (MSE, CE)")
+parser.add_argument("--model_type", type=str, default='CNN_Attention', help="The model to use (only CNN_Attention supported)")
+parser.add_argument("--data_src", type=str, default='own', help="Dataset name")
+parser.add_argument("--propotion", type=float, default=0.8, help="Proportion of training data")
+parser.add_argument("--n_epochs", type=int, default=100, help="Number of training epochs")
+parser.add_argument("--n_classes", type=int, default=4, help="Number of output classes")
+parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
+parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
 opt = parser.parse_args()
-print(opt)
 
-path = 'data/owndata/attackdata/1_x_2_all.csv'
-if opt.data_src == 'Seo':
-    if opt.attack_type == 'DoS':
-        source_data = pd.read_csv('data/CNN_data/DoS_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('data/CNN_data/DoS_label.csv')
-
-    elif opt.attack_type == 'Fuzz':
-        source_data = pd.read_csv('data/CNN_data/Fuzz_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('data/CNN_data/Fuzz_label.csv')
-
-    elif opt.attack_type == 'Gear':
-        source_data = pd.read_csv('data/CNN_data/gear_data.csv')
-        datalen = int(opt.propotion * len(source_data))
-        source_label = pd.read_csv('data/CNN_data/gear_label.csv')
-
-elif opt.data_src == 'own':
-    source_data = pd.read_csv(path)
-    datalen = int(opt.propotion * len(source_data))
-
+# Set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-class GetDataset(data.Dataset):
-    def __init__(self, data_root, data_label, tokenizer=None, max_length=128):
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-        self.data = data_root.values.astype(str) if tokenizer else data_root.values.astype(np.float32)
-        self.label = data_label.values.astype(np.int64)
+# Load dataset
+path = 'data\owndata\merged\high-speed_merged.csv'
+source_data = pd.read_csv(path)
+data = source_data.iloc[:, :-1]
+label = source_data.iloc[:, -1]
+
+# Dataset class
+class GetDataset(Dataset):  # 改为直接继承 torch.utils.data.Dataset
+    def __init__(self, data_root, data_label):
+        self.data = torch.tensor(data_root.values, dtype=torch.float32)
+        self.label = torch.tensor(data_label.values, dtype=torch.long)
 
     def __getitem__(self, index):
-        if self.tokenizer:
-            # 假设每行数据可以被视为一个句子
-            encoded = self.tokenizer.encode_plus(
-                self.data[index],
-                add_special_tokens=True,
-                max_length=self.max_length,
-                padding='max_length',
-                truncation=True,
-                return_attention_mask=True,
-                return_tensors='pt',
-            )
-            input_ids = encoded['input_ids'].squeeze(0)  # [max_length]
-            attention_mask = encoded['attention_mask'].squeeze(0)  # [max_length]
-            label = self.label[index]
-            return input_ids, attention_mask, label
-        else:
-            data = self.data[index]
-            label = self.label[index]
-            return data, label
+        return self.data[index], self.label[index]
 
     def __len__(self):
         return len(self.data)
 
-if opt.data_src == 'Seo':
-    train_data = source_data.iloc[:datalen, :]
-    train_label = source_label.iloc[:datalen, :]
-    test_data = source_data.iloc[datalen:, :]
-    test_label = source_label.iloc[datalen:, :]
-elif opt.data_src == 'own':
-    train_data = source_data.iloc[:datalen,:]
-    test_data = source_data.iloc[datalen:,:]
-    train_label = train_data.iloc[:, -1]     # 最后一列作为标签
-    test_label = test_data.iloc[:, -1]     # 最后一列作为标签
-    train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
-    test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
+# K-Fold Cross Validation
+kf = KFold(n_splits=opt.k_folds, shuffle=True, random_state=42)
+def safe_division(numerator, denominator):
+    return numerator / denominator if denominator != 0 else 0
+# Training and Evaluation Loop for K-Fold
+for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
+    logging.info(f"\nTraining fold {fold + 1}/{opt.k_folds}")
 
+    # Split data into train and validation sets for this fold
+    train_data, val_data = data.iloc[train_idx], data.iloc[val_idx]
+    train_label, val_label = label.iloc[train_idx], label.iloc[val_idx]
 
-torch_data_train = GetDataset(train_data, train_label)
-torch_data_test = GetDataset(test_data, test_label)
+    # Create DataLoader for this fold
+    torch_data_train = GetDataset(train_data, train_label)
+    torch_data_val = GetDataset(val_data, val_label)
+    
+    traindataloader = DataLoader(torch_data_train, batch_size=64, shuffle=True)
+    valdataloader = DataLoader(torch_data_val, batch_size=64, shuffle=False)
 
-traindataloader = data.DataLoader(torch_data_train, batch_size=64, shuffle=True)
-testdataloader = data.DataLoader(torch_data_test, batch_size=64, shuffle=True)
+    # Initialize CNN_Attention model for each fold
+    model = DeepConv1D_Attention(input_width=900, num_classes=4).to(device)
+    model = AttackDetectionModel(num_classes=4).to(device)
 
-output_str = f"""
-Model Type: {opt.model_type}
-Data Source: {opt.data_src}
-Data Path: {path}
-Attack Type: {opt.attack_type}
-Training Proportion: {opt.propotion}
-Number of Classes: {opt.n_classes}
-"""
-print(output_str)
+    # Loss function
+    if opt.loss_type == 'MSE':
+        criterion = nn.MSELoss()
+    elif opt.loss_type == 'CE':
+        class_weights = compute_class_weight(
+            class_weight='balanced', 
+            classes=np.arange(opt.n_classes), 
+            y=np.concatenate([labels.numpy() for _, labels in traindataloader])
+        )
+        class_weights = torch.FloatTensor(class_weights).to(device)
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
 
-output_str += '\n\n'
+    # Optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
 
-if opt.model_type == 'CNN':
-    model = CNN().to(device)
+    # Training Loop for the current fold
+    for epoch in range(opt.n_epochs):
+        model.train()
+        train_loss = 0
+        train_correct = 0
+        train_total = 0
 
-elif opt.model_type == 'KNN':
-    model = KNN()
-    # Convert training and testing data to NumPy arrays
-    train_data_np = np.array(train_data.values, dtype='float32')
-    test_data_np = np.array(test_data.values, dtype='float32')
-    train_label_np = np.array(train_label.values, dtype='int64').flatten()
-    test_label_np = np.array(test_label.values, dtype='int64').flatten()
+        logging.info(f"Epoch [{epoch + 1}/{opt.n_epochs}]")
+        train_bar = tqdm(traindataloader, desc="Training", leave=False)
 
-    X_train = train_data_np
-    y_train = train_label_np  # Labels
+        for data_x, data_y in train_bar:
+            data_x, data_y = data_x.to(device), data_y.to(device)
+            data_y = data_y.to(torch.long)
 
-    X_test = test_data_np
-    y_test = test_label_np  # Test labels
-
-    # Initialize KNN model
-    knn = KNeighborsClassifier(n_neighbors=3)
-
-    # Train KNN model
-    knn.fit(X_train, y_train)
-
-    # Predict using the test data
-    predictions = knn.predict(X_test)
-
-    # Calculate confusion matrix components
-    tp = np.sum((predictions == 1) & (y_test == 1))
-    tn = np.sum((predictions == 0) & (y_test == 0))
-    fp = np.sum((predictions == 1) & (y_test == 0))
-    fn = np.sum((predictions == 0) & (y_test == 1))
-
-    # Calculate metrics
-    total = tp + tn + fp + fn
-    accuracy = (tp + tn) / total
-    FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
-    ER = (fp + fn) / total
-    Recall = tp / (tp + fn) if (tp + fn) != 0 else 0
-    Precision = tp / (tp + fp) if (tp + fp) != 0 else 0
-    F1 = 2 * (Precision * Recall) / (Precision + Recall) if (Precision + Recall) != 0 else 0
-
-    # Output results
-    output_str += f'Final Accuracy: {accuracy * 100:.2f}%\n'
-    output_str += f'False Negative Rate (FNR): {FNR:.4f}\n'
-    output_str += f'Error Rate (ER): {ER:.4f}\n'
-    output_str += f'Recall: {Recall:.4f}\n'
-    output_str += f'F1 Score: {F1:.4f}\n'
-    with open("log.txt", "a") as f:
-        f.write(output_str)
-    print(f"Final Accuracy of KNN: {accuracy}")
-    print(f"Data path: {path}")
-    print(f"False Negative Rate (FNR): {FNR}")
-    print(f"Error Rate (ER): {ER}")
-    print(f"Recall: {Recall}")
-    print(f"F1 Score: {F1}")
-    exit()
-
-elif opt.model_type == 'DecisionTree':
-    # Convert training and testing data to NumPy arrays
-    train_data_np = np.array(train_data.values, dtype='float32')
-    test_data_np = np.array(test_data.values, dtype='float32')
-    train_label_np = np.array(train_label.values, dtype='int64').flatten()
-    test_label_np = np.array(test_label.values, dtype='int64').flatten()
-
-    X_train = train_data_np
-    y_train = train_label_np  # Labels
-
-    X_test = test_data_np
-    y_test = test_label_np  # Test labels
-
-    # Initialize Decision Tree model
-    dt_model = DecisionTreeClassifier()
-
-    # Train Decision Tree model
-    dt_model.fit(X_train, y_train)
-
-    # Predict using the test data
-    predictions = dt_model.predict(X_test)
-
-    # Calculate confusion matrix components
-    tp = np.sum((predictions == 1) & (y_test == 1))
-    tn = np.sum((predictions == 0) & (y_test == 0))
-    fp = np.sum((predictions == 1) & (y_test == 0))
-    fn = np.sum((predictions == 0) & (y_test == 1))
-
-    # Calculate metrics
-    total = tp + tn + fp + fn
-    accuracy = (tp + tn) / total
-    FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
-    ER = (fp + fn) / total
-    Recall = tp / (tp + fn) if (tp + fn) != 0 else 0
-    Precision = tp / (tp + fp) if (tp + fp) != 0 else 0
-    F1 = 2 * (Precision * Recall) / (Precision + Recall) if (Precision + Recall) != 0 else 0
-
-    # Output results
-    output_str += f'Final Accuracy: {accuracy * 100:.2f}%\n'
-    output_str += f'False Negative Rate (FNR): {FNR:.4f}\n'
-    output_str += f'Error Rate (ER): {ER:.4f}\n'
-    output_str += f'Recall: {Recall:.4f}\n'
-    output_str += f'F1 Score: {F1:.4f}\n'
-    with open("log.txt", "a") as f:
-        f.write(output_str)
-    print(f"Data path: {path}")
-    print(f"Final Accuracy of Decision Tree: {accuracy}")
-    print(f"False Negative Rate (FNR): {FNR}")
-    print(f"Error Rate (ER): {ER}")
-    print(f"Recall: {Recall}")
-    print(f"F1 Score: {F1}")
-    exit()
-
-elif opt.model_type == 'MLP':
-    # Assuming MLP is defined in modules.model
-    model = MLP(input_dim=9, hidden_dim=4096, num_classes=opt.n_classes).to(device)
-
-elif opt.model_type == 'LSTM':
-    # Assuming LSTMClassifier is defined in modules.model
-    model = LSTMClassifier(input_dim=144, hidden_dim=64, num_classes=opt.n_classes).to(device)
-
-elif opt.model_type == 'Attn':
-    model = TransformerClassifier_WithPositionalEncoding(input_dim=1, num_heads=8, num_layers=4, hidden_dim=1024, num_classes=opt.n_classes).to(device)
-
-elif opt.model_type == 'BERT':
-    model = BERT(input_dim=1, num_heads=8, num_layers=4, hidden_dim=128, num_classes=opt.n_classes).to(device)
-
-
-else:
-    raise ValueError("Invalid model_type specified.")
-
-if opt.loss_type == 'MSE':
-    criterion = torch.nn.MSELoss()
-elif opt.loss_type == 'CE':
-    if opt.data_src == 'own':
-        weights = [1.0, 1.0]
-        class_weights = torch.FloatTensor(weights).to(device)
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
-optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
-
-test_acc = []
-train_loss = []
-test_loss = []
-train_epochs_loss = []
-test_epochs_loss = []
-acc, nums = 0, 0
-maxF1 = 0
-for epoch in range(opt.n_epochs):
-    acc = nums = 0
-    train_epoch_loss = []
-    model.train()
-    for idx, batch in enumerate(traindataloader):
-        try:
-            data_x, data_y = batch
-            batch_size = data_x.size(0)
-            if opt.model_type == 'CNN':
-                data_x = data_x.view(batch_size, 1, 12, 12)
-            elif opt.model_type == 'LSTM':
-                data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
-            elif opt.model_type == 'Attn' or opt.model_type == 'BERT':
-                data_x = data_x.view(batch_size, data_x.shape[1], 1) 
-            data_x = data_x.to(torch.float32).to(device)
-            if opt.data_src == 'Seo':
-                data_y = data_y.squeeze(1).to(torch.long)
-            data_y = data_y.to(device)
-        except Exception as e:
-            print(f"Error processing batch {idx}: {e}")
-            continue
-
-        outputs = model(data_x)
-        optimizer.zero_grad()
-        loss = criterion(outputs, data_y)
-        loss.backward()
-        optimizer.step()
-
-        if opt.model_type == 'BERT':
-            _, predicts = torch.max(outputs, 1)
-            acc += (predicts == data_y).sum().cpu()
-            nums += data_y.size(0)
-        else:
-            _, predicts = torch.max(outputs, 1)
-            acc += (predicts == data_y).sum().cpu()
-            nums += data_y.size()[0]
-
-        train_epoch_loss.append(loss.item())
-        train_loss.append(loss.item())
-        if idx % max(1, (len(traindataloader)//100)) == 0:
-            print("epoch= {}/{}, {}/{} of train, loss={}".format(
-                epoch, opt.n_epochs, idx, len(traindataloader), loss.item()))
-    print("Training Accuracy:", 100 * acc / nums)
-    train_epochs_loss.append(np.average(train_epoch_loss))
-    acc = nums = 0
-
-    # Initialize confusion matrix components
-    tp, tn, fp, fn = 0, 0, 0, 0
-    model.eval()
-    with torch.no_grad():
-        for idx, batch in enumerate(testdataloader):
-            try:
-                data_x, data_y = batch
-                batch_size = data_x.size(0)
-                if opt.model_type == 'CNN':
-                    data_x = data_x.view(batch_size, 1, 12, 12)
-                elif opt.model_type == 'LSTM':
-                    data_x = data_x.view(batch_size, -1, data_x.shape[1])  # Adjust shape for LSTM
-                elif opt.model_type == 'Attn' or opt.model_type == 'BERT':
-                    data_x = data_x.view(batch_size, data_x.shape[1], 1) 
-                data_x = data_x.to(torch.float32).to(device)
-                if opt.data_src == 'Seo':
-                    data_y = data_y.squeeze(1).to(torch.long)
-                data_y = data_y.to(device)
-            except Exception as e:
-                print(f"Error processing batch {idx}: {e}")
-                continue
-
+            optimizer.zero_grad()
             outputs = model(data_x)
             loss = criterion(outputs, data_y)
-            test_epochs_loss.append(loss.item())
-            test_loss.append(loss.item())
+            loss.backward()
+            optimizer.step()
 
-            _, predicts = torch.max(outputs, 1)
-            acc += (predicts == data_y).sum().cpu()
-            nums += data_y.size(0)
+            _, predicted = torch.max(outputs, 1)
+            train_loss += loss.item() * data_y.size(0)
+            train_correct += (predicted == data_y).sum().item()
+            train_total += data_y.size(0)
 
-            # Calculate confusion matrix components
-            tp += ((predicts == 1) & (data_y == 1)).sum().item()
-            tn += ((predicts == 0) & (data_y == 0)).sum().item()
-            fp += ((predicts == 1) & (data_y == 0)).sum().item()
-            fn += ((predicts == 0) & (data_y == 1)).sum().item()
+            train_bar.set_postfix(loss=train_loss / train_total, accuracy=train_correct / train_total)
 
-    # Calculate metrics
-    total = tp + tn + fp + fn
-    FNR = fn / (fn + tp) if (fn + tp) != 0 else 0
-    ER = (fp + fn) / total
-    Recall = tp / (tp + fn) if (tp + fn) != 0 else 0
-    Precision = tp / (tp + fp) if (tp + fp) != 0 else 0
-    F1 = 2 * (Precision * Recall) / (Precision + Recall) if (Precision + Recall) != 0 else 0
-    accuracy = (tp + tn) / total
+        train_accuracy = train_correct / train_total
+        logging.info(f"Training Loss: {train_loss / train_total:.4f}, Accuracy: {train_accuracy:.4f}")
 
-    print("epoch= {}/{}, {}/{} of test, acc=".format(
-        epoch, opt.n_epochs, idx, len(testdataloader)), "%.4f" % float(acc/nums))
-    print(f"Data path: {path}")
-    print(f"False Negative Rate (FNR): {FNR:.4f}")
-    print(f"Error Rate (ER): {ER:.4f}")
-    print(f"Recall: {Recall:.4f}")
-    print(f"F1 Score: {F1:.4f}")
-    if F1 > maxF1:
-        maxF1 = F1
-        if opt.model_type == 'BERT':
-            torch.save(model.state_dict(), f"./output/{opt.model_type}_{opt.data_src}_model_F1_{F1:.2f}.pth")
-        else:
-            torch.save(model.state_dict(), f"./output/{opt.model_type}{opt.data_src}modelF1{F1:.2F}.pth")
-    test_epochs_loss.append(np.average(test_epochs_loss))
-    test_acc.append((acc/nums))
+        # Evaluation Loop for the current fold
+        model.eval()
+        val_correct = 0
+        val_total = 0
+        num_classes = opt.n_classes
+        tp = [0] * num_classes
+        fp = [0] * num_classes
+        fn = [0] * num_classes
 
-output_str = f"""
-Model Type: {opt.model_type}
-Data Source: {opt.data_src}
-Attack Type: {opt.attack_type}
-Training Proportion: {opt.propotion}
-Number of Epochs: {opt.n_epochs}
-Number of Classes: {opt.n_classes}
-Learning Rate: {opt.lr}
+        val_bar = tqdm(valdataloader, desc="Evaluating", leave=False)
+        with torch.no_grad():
+            for data_x, data_y in val_bar:
+                data_x, data_y = data_x.to(device), data_y.to(device)
+                outputs = model(data_x)
+                _, predicted = torch.max(outputs, 1)
 
-Final Accuracy: {test_acc}
-Max Accuracy: {max(test_acc)}
-Mean Accuracy: {sum(test_acc) / len(test_acc)}
-False Negative Rate (FNR): {FNR:.4f}
-Error Rate (ER): {ER:.4f}
-Recall: {Recall:.4f}
-F1 Score: {F1:.4f}
-"""
+                val_correct += (predicted == data_y).sum().item()
+                val_total += data_y.size(0)
 
-with open("log.txt", "a") as f:
-    f.write(output_str)
+                for cls in range(num_classes):
+                    tp[cls] += ((predicted == cls) & (data_y == cls)).sum().item()
+                    fp[cls] += ((predicted == cls) & (data_y != cls)).sum().item()
+                    fn[cls] += ((predicted != cls) & (data_y == cls)).sum().item()
 
-print(test_acc, "max:", max(test_acc), "   mean:", sum(test_acc) / len(test_acc))
-print(f"False Negative Rate (FNR): {FNR}")
-print(f"Error Rate (ER): {ER}")
-print(f"Recall: {Recall}")
-print(f"F1 Score: {F1}")
-if opt.model_type == 'BERT':
-    torch.save(model.state_dict(), f"./output/{opt.model_type}_{opt.data_src}_model.pth")
-else:
-    torch.save(model.state_dict(), f"./output/{opt.model_type}{opt.data_src}model.pth")
+        # Calculate Precision, Recall, F1 for each class
+        for cls in range(num_classes):
+            precision = safe_division(tp[cls], tp[cls] + fp[cls])
+            recall = safe_division(tp[cls], tp[cls] + fn[cls])
+            f1 = safe_division(2 * precision * recall, precision + recall)
+            logging.info(f"Class {cls}: Precision={precision:.4f}, Recall={recall:.4f}, F1 Score={f1:.4f}")
+
+        # Compute Macro and Micro averages
+        macro_precision = sum([safe_division(tp[cls], tp[cls] + fp[cls]) for cls in range(num_classes)]) / num_classes
+        macro_recall = sum([safe_division(tp[cls], tp[cls] + fn[cls]) for cls in range(num_classes)]) / num_classes
+        macro_f1 = sum([
+            safe_division(
+                2 * safe_division(tp[cls], tp[cls] + fp[cls]) * safe_division(tp[cls], tp[cls] + fn[cls]),
+                safe_division(tp[cls], tp[cls] + fp[cls]) + safe_division(tp[cls], tp[cls] + fn[cls])
+            )
+            for cls in range(num_classes)
+        ]) / num_classes
+
+        micro_tp = sum(tp)
+        micro_fp = sum(fp)
+        micro_fn = sum(fn)
+        micro_precision = safe_division(micro_tp, micro_tp + micro_fp)
+        micro_recall = safe_division(micro_tp, micro_tp + micro_fn)
+        micro_f1 = safe_division(2 * micro_precision * micro_recall, micro_precision + micro_recall)
+
+        logging.info(f"Macro-Averaged Metrics: Precision={macro_precision:.4f}, Recall={macro_recall:.4f}, F1 Score={macro_f1:.4f}")
+        logging.info(f"Micro-Averaged Metrics: Precision={micro_precision:.4f}, Recall={micro_recall:.4f}, F1 Score={micro_f1:.4f}")
+
+    # Save the model after each fold
+    model_save_path = f"./output/{opt.model_type}_{opt.data_src}_fold{fold + 1}_model.pth"
+    torch.save(model.state_dict(), model_save_path)
+    logging.info(f"Model saved at {model_save_path}")

@@ -6,9 +6,10 @@ import random
 from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
+import re
 
 # Example usage:
-# python scripts/modify_data.py --input_file data/owndata/processed/white1.csv --output_file data/owndata/attackdata/1_x_2_280.csv --x 2 --modify_type CANID
+# python scripts/modify_data.py --input_file data/owndata/processed/high-speed/high-speed1_processed.csv --output_file data/owndata/attackdata/high-speed/high-ID-258-306-2.csv --x 2 --modify_type CANID
 
 class DataModifier:
     def __init__(self, input_file, output_file, x, modify_type='CANID', seed=42):
@@ -40,14 +41,35 @@ class DataModifier:
             'payload': defaultdict(Counter),
             'Total_Modifications': 0
         }
-        # To store distributions before and after modification
-        self.distribution_before = {}
-        self.distribution_after = {}
+        self.selected_canids = []
+        self.extract_ids_from_output_file()
+
+    def extract_ids_from_output_file(self):
+        """
+        Extract CANID IDs from the output file name based on specific patterns.
+        Expected format: CANID values explicitly defined (e.g., 258, 306, or 258-306).
+        """
+        # Using regex to match specific CANID patterns
+        match = re.search(r'\b(?:258-306|258|306)\b', self.output_file)
+        if match:
+            # Handle different patterns
+            match_str = match.group(0)  # Full matched string
+            if '-' in match_str:
+                # Split if the match includes a range like '258-306'
+                self.selected_canids = [int(x) for x in match_str.split('-')]
+            else:
+                # Single CANID case
+                print(match_str)
+                self.selected_canids = [int(match_str)]
+            print(f"Extracted CANIDs for modification: {self.selected_canids}")
+        else:
+            print(f"Could not extract CANIDs from output file name: {self.output_file}")
+
 
     def read_data(self):
         """Read the CSV dataset and initialize unique value sets."""
         try:
-            self.data = pd.read_csv(self.input_file, header=None, delimiter=' ')
+            self.data = pd.read_csv(self.input_file, header=None, delimiter=',')
         except Exception as e:
             print(f"Error reading file: {e}")
             raise
@@ -69,92 +91,33 @@ class DataModifier:
         for col in self.payload_cols:
             print(f"Payload column {col} has {len(self.unique_payloads[col])} unique values.")
 
-    def list_canids_with_counts(self):
-        """List all CANIDs along with their occurrence counts."""
-        canid_counts = self.data[self.canid_col].value_counts().sort_index()
-        print("\n=== CANID Counts ===")
-        for canid, count in canid_counts.items():
-            print(f"CANID {canid}: {count} occurrences")
-        print("=====================\n")
-        return canid_counts
+    def modify_data(self):
+        """Perform the dataset modification."""
+        # Ensure selected CANIDs were extracted
+        if not self.selected_canids:
+            print("No CANIDs selected for modification. Exiting.")
+            return
 
-    def prompt_canid_selection(self):
-        """
-        Prompt the user to select one or more CANIDs for modification.
+        # Find all indices for the selected CANIDs
+        target_indices = self.data[self.data[self.canid_col].isin(self.selected_canids)].index.tolist()
+        total_targets = len(target_indices)
 
-        Returns:
-        - selected_canids (list): List of selected CANIDs.
-        """
-        canid_counts = self.list_canids_with_counts()
-        canid_list = canid_counts.index.tolist()
+        if total_targets == 0:
+            print("No messages found with the selected CANIDs. No modifications will be made.")
+            return
 
-        # Prompt user for input
-        while True:
-            user_input = input("Enter the CANIDs you want to modify (comma-separated), or 'all' to select all CANIDs: ").strip()
-            if user_input.lower() == 'all':
-                selected_canids = canid_list
-                break
-            else:
-                try:
-                    selected_canids = [int(cid.strip()) for cid in user_input.split(',')]
-                    # Validate selected CANIDs
-                    invalid_canids = [cid for cid in selected_canids if cid not in canid_list]
-                    if invalid_canids:
-                        print(f"Invalid CANIDs entered: {invalid_canids}. Please try again.")
-                        continue
-                    break
-                except ValueError:
-                    print("Invalid input. Please enter CANIDs as integers separated by commas, or 'all'.")
-                    continue
+        print(f"Total messages with selected CANIDs: {total_targets}")
 
-        print(f"Selected CANIDs for modification: {selected_canids}")
-        return selected_canids
+        # Determine which indices to modify: every x-th occurrence
+        modify_indices = target_indices[::self.x]
+        num_modifications = len(modify_indices)
+        print(f"Number of modifications to perform: {num_modifications}")
 
-    def capture_distribution(self, before=True):
-        """
-        Capture the current distribution of CANIDs and payloads.
+        if self.modify_type in ['CANID', 'Both']:
+            self.modify_canid(self.selected_canids, modify_indices)
 
-        Parameters:
-        - before (bool): If True, capture the distribution before modification; else, after modification.
-        """
-        prefix = 'before' if before else 'after'
-        distribution = self.distribution_before if before else self.distribution_after
-
-        # CANID distribution
-        canid_counts = self.data[self.canid_col].value_counts().sort_index()
-        distribution['CANID'] = canid_counts
-
-        # Payload distribution
-        for col in self.payload_cols:
-            payload_counts = self.data[col].value_counts().sort_index()
-            distribution[f'Payload_{col}'] = payload_counts
-
-    def plot_distribution(self, before=True, save_dir='plots'):
-        """
-        Generate and save distribution plots for CANIDs and payloads.
-
-        Parameters:
-        - before (bool): If True, plot the distribution before modification; else, after modification.
-        - save_dir (str): Directory to save the plots.
-        """
-        prefix = 'before' if before else 'after'
-        distribution = self.distribution_before if before else self.distribution_after
-
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        for key, counts in distribution.items():
-            plt.figure(figsize=(10, 6))
-            sns.barplot(x=counts.index, y=counts.values, palette='viridis')
-            plt.title(f'{prefix.capitalize()} Modification - {key} Distribution')
-            plt.xlabel(key)
-            plt.ylabel('Count')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            plot_filename = f"{prefix}_{key}_{args.x}_distribution.png"
-            plt.savefig(os.path.join(save_dir, plot_filename))
-            plt.close()
-            print(f"Saved distribution plot: {os.path.join(save_dir, plot_filename)}")
+        if self.modify_type in ['payload', 'Both']:
+            self.modify_payload_based_on_canid(modify_indices)
 
     def modify_canid(self, selected_canids, modify_indices, target_canid=None):
         """
@@ -182,14 +145,20 @@ class DataModifier:
 
             # Modify CANID
             self.data.at[idx, self.canid_col] = new_canid
-            # Set label to 1
-            self.data.at[idx, self.label_col] = 1
+
+            # Set label based on modification type
+            if self.modify_type == 'CANID':
+                self.data.at[idx, self.label_col] = 1
+            elif self.modify_type == 'payload':
+                self.data.at[idx, self.label_col] = 2
+            elif self.modify_type == 'Both':
+                self.data.at[idx, self.label_col] = 3
 
             # Record statistics
             self.statistics['CANID'][new_canid] += 1
             self.statistics['Total_Modifications'] += 1
 
-            print(f"Modified CANID at index {idx}: {current_canid} -> {new_canid}, label set to 1.")
+            print(f"Modified CANID at index {idx}: {current_canid} -> {new_canid}, label set to {self.data.at[idx, self.label_col]}.")
 
     def modify_payload_based_on_canid(self, modify_indices):
         """
@@ -216,40 +185,20 @@ class DataModifier:
 
             # Modify payload
             self.data.at[idx, payload_to_modify] = new_payload
-            # Set label to 1
-            self.data.at[idx, self.label_col] = 1
+
+            # Set label based on modification type
+            if self.modify_type == 'CANID':
+                self.data.at[idx, self.label_col] = 1
+            elif self.modify_type == 'payload':
+                self.data.at[idx, self.label_col] = 2
+            elif self.modify_type == 'Both':
+                self.data.at[idx, self.label_col] = 3
 
             # Record statistics
             self.statistics['payload'][payload_to_modify][new_payload] += 1
             self.statistics['Total_Modifications'] += 1
 
-            print(f"Modified payload at index {idx}: Column {payload_to_modify}, {current_payload} -> {new_payload}, label set to 1.")
-
-    def modify_data(self):
-        """Perform the dataset modification."""
-        # Prompt user to select CANIDs to modify
-        selected_canids = self.prompt_canid_selection()
-
-        # Find all indices for the selected CANIDs
-        target_indices = self.data[self.data[self.canid_col].isin(selected_canids)].index.tolist()
-        total_targets = len(target_indices)
-
-        if total_targets == 0:
-            print("No messages found with the selected CANIDs. No modifications will be made.")
-            return
-
-        print(f"Total messages with selected CANIDs: {total_targets}")
-
-        # Determine which indices to modify: every x-th occurrence
-        modify_indices = target_indices[::self.x]
-        num_modifications = len(modify_indices)
-        print(f"Number of modifications to perform: {num_modifications}")
-
-        if self.modify_type in ['CANID', 'Both']:
-            self.modify_canid(selected_canids, modify_indices)
-
-        if self.modify_type in ['payload', 'Both']:
-            self.modify_payload_based_on_canid(modify_indices)
+            print(f"Modified payload at index {idx}: Column {payload_to_modify}, {current_payload} -> {new_payload}, label set to {self.data.at[idx, self.label_col]}.")
 
     def save_data(self):
         """Save the modified dataset."""
@@ -287,18 +236,27 @@ class DataModifier:
             raise
 
     def plot_distributions_before_after(self, save_dir='plots'):
-        """Plot distributions before and after modifications without modifying data."""
-        self.plot_distribution(before=True, save_dir=save_dir)
-        self.plot_distribution(before=False, save_dir=save_dir)
+        """Generate plots of distributions before and after modifications."""
+        before_data = self.data.copy()
+        before_data['label'] = 0  # Assuming 0 for original data
 
-    def generate_plots(self, save_dir='plots'):
-        """Generate and save distribution plots after modifications."""
-        self.plot_distributions_before_after(save_dir=save_dir)
+        after_data = self.data.copy()
+        after_data['label'] = 1  # Assuming 1 for modified data
 
-    def plot_distributions_before_after(self, save_dir='plots'):
-        """Plot distributions before and after modifications without modifying data."""
-        self.plot_distribution(before=True, save_dir=save_dir)
-        self.plot_distribution(before=False, save_dir=save_dir)
+        # Concatenate before and after data
+        combined_data = pd.concat([before_data, after_data], axis=0)
+
+        sns.set(style="whitegrid")
+        plt.figure(figsize=(12, 8))
+
+        for col in self.payload_cols:
+            plt.subplot(3, 3, col)
+            sns.histplot(combined_data[col], kde=True, hue='label', bins=30)
+            plt.title(f"Payload Column {col}")
+
+        plt.tight_layout()
+        plt.savefig(f"{save_dir}/payload_distributions_before_after.png")
+        plt.close()
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -311,9 +269,9 @@ def parse_arguments():
     parser.add_argument("--log_file", type=str, default="modification_statistics.txt", help="Path to the modification statistics log file.")
     parser.add_argument("--save_dir", type=str, default="plots", help="Directory to save distribution plots.")
     return parser.parse_args()
-args = parse_arguments()
 
 def main():
+    args = parse_arguments()
 
     if not os.path.isfile(args.input_file):
         print(f"Input file does not exist: {args.input_file}")
@@ -330,17 +288,14 @@ def main():
     print("Reading data...")
     modifier.read_data()
 
-    print("\nCapturing distribution before modifications...")
-    modifier.capture_distribution(before=True)
+    # print("\nCapturing distribution before modifications...")
+    # modifier.plot_distributions_before_after(save_dir=args.save_dir)
 
     print("\nStarting data modifications...")
     modifier.modify_data()
 
-    print("\nCapturing distribution after modifications...")
-    modifier.capture_distribution(before=False)
-
-    print("\nPlotting and saving distribution plots...")
-    modifier.plot_distributions_before_after(save_dir=args.save_dir)
+    # print("\nCapturing distribution after modifications...")
+    # modifier.plot_distributions_before_after(save_dir=args.save_dir)
 
     print("\nSaving modified data...")
     modifier.save_data()

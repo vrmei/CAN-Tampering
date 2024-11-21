@@ -6,8 +6,41 @@ from tqdm import tqdm
 import argparse
 
 
-# python scripts/owndataprocess.py batch --input_dir ./data/owndata/origin/ --output_dir ./data/owndata/processed/ --output_file merged_data.csv
+# python scripts/own_data_process.py batch --input_dir ./data/owndata/origin/high-speed --output_dir ./data/owndata/processed/ --output_file high-speed-merge.csv
+# python scripts/own_data_process.py single --file ./data/owndata/origin/high-speed/high-speed4.asc --output_dir ./data/owndata/processed/high-speed
+# python scripts/own_data_process.py batch_single --input_dir ./data/owndata/origin/high-speed --output_dir ./data/owndata/processed/high-speed
 
+def process_files_individually(input_dir, output_dir):
+    """
+    按单文件的方式逐一处理目录中的所有 .asc 文件。
+    
+    参数:
+        input_dir (str): 存放 .asc 文件的输入文件夹路径。
+        output_dir (str): 处理后 CSV 文件的输出文件夹路径。
+    """
+    # 确保输出文件夹存在
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # 获取所有 .asc 文件的路径
+    file_pattern = os.path.join(input_dir, '*.asc')
+    file_list = glob.glob(file_pattern)
+    
+    if not file_list:
+        print(f"警告：在目录 {input_dir} 中未找到任何 .asc 文件。")
+        return
+    
+    print(f"找到 {len(file_list)} 个 .asc 文件。开始逐文件处理...")
+    
+    # 遍历并处理每个文件
+    for file_path in tqdm(file_list, desc="Processing files individually"):
+        # 提取文件名生成对应的输出文件名
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        output_filename = f"{base_name}_processed.csv"
+        
+        # 调用单文件处理方法
+        process_single_file(file_path, output_dir, output_filename)
+    
+    print(f"所有文件已按单文件方式处理并保存到目录 {output_dir}")
 
 def process_file(file_path):
     """
@@ -94,7 +127,7 @@ def process_all_files(input_dir, output_dir, output_filename='merged_data.csv'):
     except Exception as e:
         print(f"错误：无法保存合并后的数据到 {output_path}，错误信息: {e}")
     
-    # 可选：打印部分数据
+    # 打印部分数据
     print("示例数据（前5行）：")
     print(temparray[:5])
 
@@ -142,8 +175,8 @@ def main():
     parser = argparse.ArgumentParser(description="处理 .asc 文件并转换为 CSV 格式。")
     subparsers = parser.add_subparsers(dest='command', help='子命令帮助')
 
-    # 子命令：批量处理
-    parser_batch = subparsers.add_parser('batch', help='批量处理多个 .asc 文件')
+    # 子命令：批量处理（合并输出）
+    parser_batch = subparsers.add_parser('batch', help='批量处理多个 .asc 文件并合并为一个输出文件')
     parser_batch.add_argument('--input_dir', type=str, required=True, help='输入文件夹路径，包含 .asc 文件')
     parser_batch.add_argument('--output_dir', type=str, required=True, help='输出文件夹路径')
     parser_batch.add_argument('--output_file', type=str, default='merged_data.csv', help='合并后的输出 CSV 文件名')
@@ -154,12 +187,19 @@ def main():
     parser_single.add_argument('--output_dir', type=str, required=True, help='输出文件夹路径')
     parser_single.add_argument('--output_file', type=str, default=None, help='输出 CSV 文件名（可选）')
 
+    # 子命令：逐文件单独处理
+    parser_individual = subparsers.add_parser('batch_single', help='按单文件方式逐一处理目录中的所有文件')
+    parser_individual.add_argument('--input_dir', type=str, required=True, help='输入文件夹路径，包含 .asc 文件')
+    parser_individual.add_argument('--output_dir', type=str, required=True, help='输出文件夹路径')
+
     args = parser.parse_args()
 
     if args.command == 'batch':
         process_all_files(args.input_dir, args.output_dir, args.output_file)
     elif args.command == 'single':
         process_single_file(args.file, args.output_dir, args.output_file)
+    elif args.command == 'batch_single':
+        process_files_individually(args.input_dir, args.output_dir)
     else:
         parser.print_help()
 
