@@ -47,16 +47,18 @@ opt = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Load dataset
-path = 'data\owndata\merged\high-speed_merged.csv'
-source_data = pd.read_csv(path)
-data = source_data.iloc[:, :-1]
-label = source_data.iloc[:, -1]
+path = 'data/owndata/merged/high-speed_merged.npy'  # .npy 文件路径
+source_data = np.load(path)  # 加载 .npy 文件
+
+# Assuming the last column is the label
+data = source_data[:, :-1]
+label = source_data[:, -1] 
 
 # Dataset class
 class GetDataset(Dataset):  # 改为直接继承 torch.utils.data.Dataset
     def __init__(self, data_root, data_label):
-        self.data = torch.tensor(data_root.values, dtype=torch.float32)
-        self.label = torch.tensor(data_label.values, dtype=torch.long)
+        self.data = torch.tensor(data_root, dtype=torch.float32)
+        self.label = torch.tensor(data_label, dtype=torch.long)
 
     def __getitem__(self, index):
         return self.data[index], self.label[index]
@@ -73,8 +75,8 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
     logging.info(f"\nTraining fold {fold + 1}/{opt.k_folds}")
 
     # Split data into train and validation sets for this fold
-    train_data, val_data = data.iloc[train_idx], data.iloc[val_idx]
-    train_label, val_label = label.iloc[train_idx], label.iloc[val_idx]
+    train_data, val_data = data[train_idx], data[val_idx]
+    train_label, val_label = label[train_idx], label[val_idx]
 
     # Create DataLoader for this fold
     torch_data_train = GetDataset(train_data, train_label)
@@ -84,7 +86,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
     valdataloader = DataLoader(torch_data_val, batch_size=64, shuffle=False)
 
     # Initialize CNN_Attention model for each fold
-    model = DeepConv1D_Attention(input_width=900, num_classes=4).to(device)
+    # model = DeepConv1D_Attention(input_width=900, num_classes=4).to(device)
     model = AttackDetectionModel(num_classes=4).to(device)
 
     # Loss function
