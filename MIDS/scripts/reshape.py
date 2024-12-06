@@ -86,8 +86,6 @@ def reshape_data(data, output_file, group_size=9, discard_incomplete=True):
         labels = group_data.iloc[:, -1].values
 
         # Aggregate labels:
-        # 如果组内有任何非0标签，则将组标签设置为组内最大的非0标签
-        # 否则，组标签为0
         non_zero_labels = labels[labels != 0]
         if len(non_zero_labels) > 0:
             aggregated_label = int(non_zero_labels.max())
@@ -97,7 +95,6 @@ def reshape_data(data, output_file, group_size=9, discard_incomplete=True):
         reshaped_data.append(data_fields)
         reshaped_labels.append(aggregated_label)
 
-        # 打印进度
         if (group + 1) % 1000 == 0:
             print(f"Processed {group + 1} groups...")
 

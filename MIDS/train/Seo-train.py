@@ -22,11 +22,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-from tqdm import tqdm  # Changed from 'from tqdm import *' for clarity
-from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, MLP, LSTMClassifier, BERT  # Import BERTClassifier
+from tqdm import tqdm  
+from modules.model import TransformerClassifier_WithPositionalEncoding, CNN, KNN, MLP, LSTMClassifier, BERT  
 import random
 
-# 需要导入tokenizer
+
 from transformers import BertTokenizer
 
 # CUDA_VISIBLE_DEVICES=1 python train/train.py
@@ -81,7 +81,6 @@ class GetDataset(data.Dataset):
 
     def __getitem__(self, index):
         if self.tokenizer:
-            # 假设每行数据可以被视为一个句子
             encoded = self.tokenizer.encode_plus(
                 self.data[index],
                 add_special_tokens=True,
@@ -111,10 +110,10 @@ if opt.data_src == 'Seo':
 elif opt.data_src == 'own':
     train_data = source_data.iloc[:datalen,:]
     test_data = source_data.iloc[datalen:,:]
-    train_label = train_data.iloc[:, -1]     # 最后一列作为标签
-    test_label = test_data.iloc[:, -1]     # 最后一列作为标签
-    train_data = train_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
-    test_data = test_data.iloc[:, :-1]  # 选择除了最后一列之外的所有列作为数据
+    train_label = train_data.iloc[:, -1]     
+    test_label = test_data.iloc[:, -1]     
+    train_data = train_data.iloc[:, :-1] 
+    test_data = test_data.iloc[:, :-1] 
 
 
 torch_data_train = GetDataset(train_data, train_label)

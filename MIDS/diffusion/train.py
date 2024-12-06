@@ -16,7 +16,7 @@ batch_size = 32
 num_epochs = 100
 timesteps = 1000
 eta = 0.0  # 确定性采样
-
+##
 # 生成随机数据作为示例
 train_data_np = torch.randn(num_samples, seq_len, input_dim)
 train_label_np = torch.randn(num_samples, output_dim)  # 对于生成任务，标签可以是数据本身

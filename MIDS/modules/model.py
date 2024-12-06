@@ -61,24 +61,22 @@ class FrequencyEmbedding(nn.Module):
 class MLP(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_classes, dropout_prob=0.2):
         super(MLP, self).__init__()
-        # 定义第一个全连接层
+
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        # 定义第一个层归一化
+
         self.ln1 = nn.LayerNorm(hidden_dim)
-        # 定义第二个全连接层
+
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        # 定义第二个层归一化
+
         self.ln2 = nn.LayerNorm(hidden_dim)
-        # 定义输出层
+
         self.output_layer = nn.Linear(hidden_dim, num_classes)
-        # 定义激活函数
+
         self.relu = nn.ReLU()
-        # 定义 Dropout，概率可以在实例化时传递，默认值为 0.2
+
         self.dropout = nn.Dropout(p=dropout_prob)
         
     def forward(self, x):
-        # 前向传播：
-        # 输入 -> 全连接层1 -> 层归一化1 -> ReLU -> Dropout -> 全连接层2 -> 层归一化2 -> ReLU -> Dropout -> 输出层
         out = self.fc1(x)
         out = self.ln1(out)
         out = self.relu(out)
@@ -96,20 +94,18 @@ class LSTMClassifier(nn.Module):
         super(LSTMClassifier, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        # 定义 LSTM 层
+
         self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
-        # 定义输出层
+
         self.fc = nn.Linear(hidden_dim, num_classes)
     
     def forward(self, x):
-        # x 的形状：(batch_size, seq_length, input_dim)
-        # 初始化隐藏状态和细胞状态为零
         x = x.unsqueeze(-1)
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
-        # 前向传播 LSTM
+
         out, _ = self.lstm(x, (h0, c0))
-        # 取最后一个时间步的输出
+
         out = out[:, -1, :]  # (batch_size, hidden_dim)
         out = self.fc(out)
         return out
@@ -146,27 +142,32 @@ class PositionalEncodingWithDecay(nn.Module):
         x = x + pe
         return x
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
 class TransformerClassifier_WithPositionalEncoding(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
                  embedding_dim=128, dropout=0.1, max_seq_len=900):
         """
-        初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
+        Initialize the Transformer classification model with positional encoding and Layer Normalization.
         
-        :param input_dim: 输入特征的维度（如图像或时间序列的特征维度）
-        :param num_heads: 多头自注意力机制中的头数
-        :param num_layers: Transformer Encoder层的数量
-        :param hidden_dim: Transformer中的隐藏层维度
-        :param num_classes: 分类的类别数量
-        :param embedding_dim: 嵌入维度
-        :param dropout: Dropout比率
-        :param max_seq_len: 序列的最大长度，用于位置编码
+        :param input_dim: Input feature dimension (e.g., feature dimension of images or time series)
+        :param num_heads: Number of heads in the multi-head attention mechanism
+        :param num_layers: Number of Transformer Encoder layers
+        :param hidden_dim: Hidden layer dimension in the Transformer
+        :param num_classes: Number of classes for classification
+        :param embedding_dim: Embedding dimension
+        :param dropout: Dropout rate
+        :param max_seq_len: Maximum sequence length for positional encoding
         """
         super(TransformerClassifier_WithPositionalEncoding, self).__init__()
 
-        # 嵌入层：将 input_dim 映射到 embedding_dim
+        # Embedding layer: maps input_dim to embedding_dim
         self.embedding = nn.Linear(input_dim, embedding_dim)
 
-        # LayerNorm层
+        # LayerNorm layer
         self.layer_norm_input = nn.LayerNorm(embedding_dim)
 
         self.dropout = nn.Dropout(dropout)
@@ -177,11 +178,11 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
             nhead=num_heads,
             dim_feedforward=hidden_dim * 4,
             dropout=dropout,
-            activation='relu'  # 使用ReLU激活函数
+            activation='relu'  # Use ReLU activation function
         )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
 
-        # 分类器
+        # Classifier
         self.fc = nn.Sequential(
             nn.Linear(embedding_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -192,62 +193,57 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
 
     def forward(self, x):
         """
-        前向传播
-        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim)
-        :return: 分类结果
+        Forward propagation
+        :param x: Input data, shape (batch_size, seq_len, input_dim)
+        :return: Classification result
         """
         batch_size, seq_len = x.size()
         x = x.unsqueeze(-1)
 
-        # 嵌入层
+        # Embedding layer
         x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
-
-        # 添加位置编码
-        # x = self.positional_encoding(x)  # (batch_size, seq_len, embedding_dim=128)
 
         # LayerNorm
         x = self.layer_norm_input(x)  # (batch_size, seq_len, embedding_dim=128)
-        x = torch.relu(x)              # 激活函数
+        x = torch.relu(x)  # Activation function
         x = self.dropout(x)
 
-        # Transformer 编码
-        # Transformer期望的输入形状为 (seq_len, batch_size, embedding_dim)
+        # Transformer encoding
+        # Transformer expects input shape (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
         x = self.transformer_encoder(x)  # (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
 
-        # 池化：平均池化
+        # Pooling: average pooling
         x = x.mean(dim=1)  # (batch_size, embedding_dim)
 
-        # 分类器进行分类
+        # Classification
         output = self.fc(x)  # (batch_size, num_classes)
 
         return output
-
-
 
 
 class BERT(nn.Module):
     def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
                  embedding_dim=128, dropout=0.1, max_seq_len=600):
         """
-        初始化Transformer分类模型，加入带有衰减机制的位置编码，使用Layer Normalization层并优化结构。
+        Initialize the Transformer classification model with positional encoding and Layer Normalization.
         
-        :param input_dim: 输入特征的维度（如图像或时间序列的特征维度）
-        :param num_heads: 多头自注意力机制中的头数
-        :param num_layers: Transformer Encoder层的数量
-        :param hidden_dim: Transformer中的隐藏层维度
-        :param num_classes: 分类的类别数量
-        :param embedding_dim: 嵌入维度
-        :param dropout: Dropout比率
-        :param max_seq_len: 序列的最大长度，用于位置编码
+        :param input_dim: Input feature dimension (e.g., feature dimension of images or time series)
+        :param num_heads: Number of heads in the multi-head attention mechanism
+        :param num_layers: Number of Transformer Encoder layers
+        :param hidden_dim: Hidden layer dimension in the Transformer
+        :param num_classes: Number of classes for classification
+        :param embedding_dim: Embedding dimension
+        :param dropout: Dropout rate
+        :param max_seq_len: Maximum sequence length for positional encoding
         """
         super(BERT, self).__init__()
 
-        # 嵌入层：将 input_dim 映射到 embedding_dim
+        # Embedding layer: maps input_dim to embedding_dim
         self.embedding = nn.Linear(input_dim, embedding_dim)
 
-        # 位置编码
+        # Positional encoding
         self.positional_encoding = PositionalEncodingWithDecay(
             max_seq_len=max_seq_len,
             embedding_dim=embedding_dim,
@@ -255,24 +251,24 @@ class BERT(nn.Module):
             decay_factor=0.9
         )
 
-        # LayerNorm层
+        # LayerNorm layer
         self.layer_norm_input = nn.LayerNorm(embedding_dim)
 
         self.dropout = nn.Dropout(dropout)
 
-        # 定义8个相同的Transformer Encoder层
+        # Define 8 identical Transformer Encoder layers
         self.encoder_layers = nn.ModuleList([
             nn.TransformerEncoderLayer(
                 d_model=embedding_dim,
                 nhead=num_heads,
                 dim_feedforward=hidden_dim * 4,
                 dropout=dropout,
-                activation='relu'  # 使用ReLU激活函数
+                activation='relu'
             )
-            for _ in range(8)  # 连接8个相同的Encoder层
+            for _ in range(8)
         ])
 
-        # 分类器
+        # Classifier
         self.fc = nn.Sequential(
             nn.Linear(embedding_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -283,39 +279,37 @@ class BERT(nn.Module):
 
     def forward(self, x):
         """
-        前向传播
-        :param x: 输入数据, 形状为 (batch_size, seq_len, input_dim)
-        :return: 分类结果
+        Forward propagation
+        :param x: Input data, shape (batch_size, seq_len, input_dim)
+        :return: Classification result
         """
         batch_size, seq_len, input_dim = x.size()
 
-        # 嵌入层
+        # Embedding layer
         x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
 
-        # 添加位置编码
+        # Add positional encoding
         x = self.positional_encoding(x)  # (batch_size, seq_len, embedding_dim=128)
 
         # LayerNorm
         x = self.layer_norm_input(x)  # (batch_size, seq_len, embedding_dim=128)
-        x = torch.relu(x)              # 激活函数
+        x = torch.relu(x)  # Activation function
         x = self.dropout(x)
 
-        # Transformer 编码
-        # Transformer期望的输入形状为 (seq_len, batch_size, embedding_dim)
+        # Transformer encoding
+        # Transformer expects input shape (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
         for encoder in self.encoder_layers:
             x = encoder(x)  # (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
 
-        # 池化：平均池化
+        # Pooling: average pooling
         x = x.mean(dim=1)  # (batch_size, embedding_dim)
 
-        # 分类器进行分类
+        # Classification
         output = self.fc(x)  # (batch_size, num_classes)
 
         return output
-
-
 
 
 class CNN(nn.Module):
@@ -605,7 +599,6 @@ class Conv1D_Attention_Advanced(nn.Module):
 
 
 
-# Sincos实现
 def Sincos_position_encoding(seq_len, dim):
     position = torch.arange(0, seq_len, dtype=torch.float32).unsqueeze(1)  # (seq_len, 1)
     div_term = torch.exp(torch.arange(0, dim, 2).float() * -(math.log(10000.0) / dim))  # (dim//2,)
@@ -614,7 +607,6 @@ def Sincos_position_encoding(seq_len, dim):
     pe[:, 1::2] = torch.cos(position * div_term)  # Apply cosine to odd indices
     return pe.unsqueeze(0)  # Shape: (1, seq_len, dim)
 
-# 注意力机制实现
 class AttentionLayer(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_heads):
         super(AttentionLayer, self).__init__()
@@ -638,7 +630,6 @@ class AttentionLayer(nn.Module):
 
 
 #---------------------------------------------------------------------Sincos---------------------------------------------------------------------------
-# 修改后的AttackDetectionModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -766,96 +757,6 @@ class AttackDetectionModel_Sincos(nn.Module):
         
         # Add positional encoding (Sincos)
         combined_feat = combined_feat + self.pos_encoding.to(combined_feat.device)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
-        
-        # Apply Attention
-        attention_out = self.attn_layer(combined_feat)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
-        
-        # Max pooling over sequence
-        pooled_feat = torch.max(attention_out, dim=1).values  # Shape: (batch_size, embed_dim + hidden_dim*2)
-        
-        # Classification
-        out = self.fc(pooled_feat)  # Shape: (batch_size, num_classes)
-        
-        return out
-
-
-class AttackDetectionModel_register(nn.Module):
-    def __init__(self, input_width=1, embed_dim=256, data_dim=8, hidden_dim=64, num_classes=4, dropout=0.2, num_heads=4):
-        """
-        初始化攻击检测模型。
-        
-        Args:
-            input_width (int): 输入 ID 的维度。
-            embed_dim (int): 嵌入层的维度。
-            data_dim (int): 数据特征的维度。
-            hidden_dim (int): 隐藏层的维度。
-            num_classes (int): 分类类别的数量。
-            dropout (float): Dropout 的概率。
-            num_heads (int): 注意力机制的头数。
-        """
-        super(AttackDetectionModel_register, self).__init__()
-
-        # Embedding layer for IDs
-        self.embedding_layer = nn.Sequential(
-            nn.Linear(input_width, embed_dim),
-            nn.LayerNorm(embed_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout)
-        )
-        
-        # Multiple 1D convolutions for data
-        self.data_conv1 = nn.Conv1d(in_channels=data_dim, out_channels=hidden_dim, kernel_size=3, padding=1)
-        self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
-
-        # Attention Layer
-        self.attn_layer = AttentionLayer(input_dim=embed_dim + hidden_dim * 2, hidden_dim=hidden_dim, num_heads=num_heads)
-        
-        # Position encoding (ROPE)
-        pe = Sincos_position_encoding(100, embed_dim + hidden_dim * 2)  # Assume sequence length is 100
-        self.register_buffer('pos_encoding', pe)  # 注册位置编码为 buffer
-        
-        # Fully connected layers
-        self.fc = nn.Sequential(
-            nn.Linear(embed_dim + hidden_dim * 2, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_classes)
-        )
-    
-    def forward(self, x):
-        """
-        前向传播。
-        
-        Args:
-            x (torch.Tensor): 输入张量，形状为 (batch_size, seq_len=900)。
-        
-        Returns:
-            torch.Tensor: 分类结果，形状为 (batch_size, num_classes)。
-        """
-        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        x = x.view(x.size(0), 100, 9)
-        
-        # Split ID and data
-        id_data = x[:, :, 0]  # Shape: (batch_size, 100)
-        data = x[:, :, 1:]    # Shape: (batch_size, 100, 8)
-        
-        # Add an extra dimension to id_data for embedding
-        id_data = id_data.unsqueeze(-1)  # Shape: (batch_size, 100, 1)
-        
-        # Process ID with embedding
-        id_embed = self.embedding_layer(id_data)  # Shape: (batch_size, 100, embed_dim)
-        
-        # Process data with convolution
-        data = data.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
-        data_feat = F.relu(self.data_conv1(data))  # Shape: (batch_size, hidden_dim, 100)
-        data_feat = F.relu(self.data_conv2(data_feat))  # Shape: (batch_size, hidden_dim*2, 100)
-        data_feat = data_feat.permute(0, 2, 1)  # Change back to (batch_size, 100, hidden_dim*2)
-        
-        # Concatenate ID and data features
-        combined_feat = torch.cat((id_embed, data_feat), dim=-1)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
-        
-        # Add positional encoding (ROPE)
-        pe = self.pos_encoding[:, :combined_feat.size(1), :]  # Ensure positional encoding matches input sequence length
-        combined_feat = combined_feat + pe  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
         
         # Apply Attention
         attention_out = self.attn_layer(combined_feat)  # Shape: (batch_size, 100, embed_dim + hidden_dim*2)
