@@ -11,7 +11,7 @@ This repository provides scripts to preprocess raw CAN data, manipulate datasets
 
 ## Script Details
 
-### 1. `own_data_process.py`
+## 1. `own_data_process.py`
 This script processes raw `.asc` files into `.csv` files.
 
 - **Batch processing**: Combine multiple `.asc` files into a single `.csv` file.
@@ -20,13 +20,13 @@ This script processes raw `.asc` files into `.csv` files.
 
 **Usage**:
 
-# Batch processing: Merge multiple .asc files
+### Batch processing: Merge multiple .asc files
 python own_data_process.py batch --input_dir ./data/raw --output_dir ./data/processed --output_file merged.csv
 
-# Single file processing
+### Single file processing
 python own_data_process.py single --file ./data/raw/example.asc --output_dir ./data/processed
 
-# Process each .asc file individually
+### Process each .asc file individually
 python own_data_process.py batch_single --input_dir ./data/raw --output_dir ./data/processed/individual
 
 
