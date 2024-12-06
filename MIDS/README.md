@@ -19,7 +19,7 @@ This script processes raw `.asc` files into `.csv` files.
 - **Batch single processing**: Process all `.asc` files individually into separate `.csv` files.
 
 **Usage**:
-```bash
+
 # Batch processing: Merge multiple .asc files
 python own_data_process.py batch --input_dir ./data/raw --output_dir ./data/processed --output_file merged.csv
 
@@ -29,13 +29,13 @@ python own_data_process.py single --file ./data/raw/example.asc --output_dir ./d
 # Process each .asc file individually
 python own_data_process.py batch_single --input_dir ./data/raw --output_dir ./data/processed/individual
 
+
 ## 2. `modify_data.py`
 
 This script applies controlled modifications to the CAN data. It can modify the CAN ID, payload, or both, based on your chosen configuration. You can specify how frequently the modifications occur (e.g., every nth message) and apply predefined corruption strategies or experiment with your own.
 
 ### Usage
 
-```bash
 python modify_data.py --input_file ./data/processed/merged.csv --output_file ./data/modified/modified.csv --x 10 --modify_type Both
 
 ### Options
@@ -56,7 +56,6 @@ This script reshapes CAN data by grouping multiple rows into blocks for training
 
 ### Usage
 
-```bash
 python reshape.py --input_dir ./data/modified --output_file ./data/reshaped/reshaped.csv --group_size 100
 
 ### Options
@@ -71,7 +70,6 @@ This script converts processed `.csv` files into `.npy` format for efficient loa
 
 ### Usage
 
-```bash
 python transfer.py --input_csv ./data/reshaped/reshaped.csv --output_npy ./data/reshaped/reshaped.npy
 
 ### Options
@@ -84,7 +82,6 @@ The `merge.py` script is used to merge multiple processed files into a single da
 
 ### Usage
 
-```bash
 python merge.py --input_dir ./data/processed --output_file ./data/merged/merged.csv
 
 ### Options
@@ -94,7 +91,7 @@ python merge.py --input_dir ./data/processed --output_file ./data/merged/merged.
 # Notes
 ## Dependencies:
 
-Python 3.x
+Python 3.10
 Required libraries: numpy, pandas, tqdm, argparse
 Customizable Parameters: Experiment with different corruption levels, grouping sizes, and modification strategies to test the model's robustness.
 Data Imbalance: Be cautious about data imbalance, especially when setting the group size in reshape.py.
