@@ -1,4 +1,4 @@
-# Repository Name
+# CAN-Tampering
 
 This repository contains tools and code related to **CAN Bus Fuzzing**, and the **MIDS model** used in the research paper. The project is structured into two main modules: **MIDS**, and **CANFUZZ**.
 
