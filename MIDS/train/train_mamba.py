@@ -27,6 +27,34 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc, label_binarize
 from itertools import cycle
 
+class FocalLoss(nn.Module):
+    """
+    Focal Loss, a powerful alternative to CrossEntropyLoss for scenarios with
+    extreme class imbalance. It dynamically down-weights easy-to-classify examples
+    (like the vast majority of normal traffic) and forces the model to focus on
+    hard-to-classify examples, which is key to reducing false positives.
+    """
+    def __init__(self, alpha=1, gamma=2, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        # We use 'none' reduction to get the loss for each sample individually.
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none')
+        # pt is the probability of the true class.
+        pt = torch.exp(-ce_loss)
+        # The focal loss formula
+        focal_loss = self.alpha * (1 - pt)**self.gamma * ce_loss
+
+        if self.reduction == 'mean':
+            return torch.mean(focal_loss)
+        elif self.reduction == 'sum':
+            return torch.sum(focal_loss)
+        else:
+            return focal_loss
+
 # Function to compute and save confusion matrix
 def plot_confusion_matrix(y_true, y_pred, class_names, fold, output_dir="./output"):
     """
@@ -119,7 +147,7 @@ logging.basicConfig(level=logging.INFO,
 
 # Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--loss_type", type=str, default='CE', help="Loss function type (MSE, CE)")
+parser.add_argument("--loss_type", type=str, default='Focal', choices=['CE', 'Focal'], help="Loss function type (CE, Focal)")
 parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--n_classes", type=int, default=4, help="Number of output classes")
 parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
@@ -172,7 +200,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
     valdataloader = DataLoader(torch_data_val, batch_size=1024, shuffle=False)
 
     # Initialize the model for each fold
-    model = MambaCAN_2Direction(num_classes=4).to(device)
+    model = AttackDetectionModel_no_embedding_pos(num_classes=4).to(device)
 
     # Loss function
     if opt.loss_type == 'MSE':
@@ -185,6 +213,15 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
         )
         class_weights = torch.FloatTensor(class_weights).to(device)
         criterion = nn.CrossEntropyLoss(weight=class_weights)
+    elif opt.loss_type == 'Focal':
+        # For Focal Loss, you can still apply class weighting via the 'alpha' parameter.
+        # Here we calculate weights similarly to CE and can pass them to FocalLoss if needed.
+        y_train = np.concatenate([labels.numpy() for _, labels in traindataloader])
+        unique_classes = np.unique(y_train)
+        class_weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
+        # The alpha parameter in FocalLoss can be a list of weights per class.
+        # Note: A tensor of weights is passed to alpha.
+        criterion = FocalLoss(alpha=torch.tensor(class_weights, dtype=torch.float32).to(device), gamma=2)
 
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
