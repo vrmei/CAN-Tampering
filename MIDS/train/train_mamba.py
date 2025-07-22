@@ -24,7 +24,8 @@ from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import Dataset, DataLoader
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc, label_binarize
+from itertools import cycle
 
 # Function to compute and save confusion matrix
 def plot_confusion_matrix(y_true, y_pred, class_names, fold, output_dir="./output"):
@@ -44,6 +45,63 @@ def plot_confusion_matrix(y_true, y_pred, class_names, fold, output_dir="./outpu
     disp.plot(cmap=plt.cm.Blues, values_format='d')
     plt.title(f"Confusion Matrix for Fold {fold + 1}")
     plt.savefig(f"{output_dir}/confusion_matrix_fold_{fold + 1}_{log_file}.png")
+    plt.close()
+
+def plot_roc_curves(y_true, y_scores, n_classes, fold, output_dir="./output"):
+    """
+    Plots and saves ROC curves for each class and a macro-average. This provides
+    a detailed view of the trade-off between detecting true positives and avoiding
+    false alarms, which is critical for security applications.
+    """
+    # Binarize the labels for multi-class ROC analysis
+    y_true_binarized = label_binarize(y_true, classes=np.arange(n_classes))
+
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_true_binarized[:, i], y_scores[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    
+    # Compute macro-average ROC curve and ROC area
+    # First aggregate all false positive rates
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+    
+    # Then interpolate all ROC curves at these points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+        
+    # Finally average it and compute AUC
+    mean_tpr /= n_classes
+    
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+    # Plot all ROC curves
+    plt.figure(figsize=(12, 10))
+    
+    plt.plot(fpr["macro"], tpr["macro"],
+             label='Macro-average ROC curve (area = {0:0.2f})'.format(roc_auc["macro"]),
+             color='navy', linestyle=':', linewidth=4)
+
+    colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'green'])
+    class_names=[f"Class {i}" for i in range(n_classes)]
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label='ROC curve of {0} (area = {1:0.2f})'.format(class_names[i], roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=2, label='No-Skill (Luck)')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate (FPR)', fontsize=12)
+    plt.ylabel('True Positive Rate (TPR)', fontsize=12)
+    plt.title(f'Receiver Operating Characteristic (ROC) for Fold {fold + 1}', fontsize=14)
+    plt.legend(loc="lower right")
+    plt.grid(True)
+    plt.savefig(f"{output_dir}/roc_curve_fold_{fold + 1}_{log_file}.png")
     plt.close()
 
 
@@ -97,6 +155,7 @@ def safe_division(numerator, denominator):
 
 # Training and Evaluation Loop for K-Fold
 sum_rec, sum_pre, sum_F1, sum_acc = 0, 0, 0, 0
+sum_fpr, sum_fnr = 0, 0 # Initialize sums for new metrics
 all_time = []
 
 for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
@@ -177,15 +236,18 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
         tp = [0] * num_classes
         fp = [0] * num_classes
         fn = [0] * num_classes
+        tn = [0] * num_classes # Added True Negatives
 
         all_labels = []
         all_preds = []
+        all_scores = [] # Added for ROC curve analysis
 
         val_bar = tqdm(valdataloader, desc="Evaluating", leave=False)
         with torch.no_grad():
             for data_x, data_y in val_bar:
                 data_x, data_y = data_x.to(device), data_y.to(device)
                 outputs = model(data_x)
+                scores = torch.softmax(outputs, dim=1)
                 _, predicted = torch.max(outputs, 1)
 
                 val_correct += (predicted == data_y).sum().item()
@@ -193,36 +255,49 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
 
                 all_labels.extend(data_y.cpu().numpy())
                 all_preds.extend(predicted.cpu().numpy())
+                all_scores.extend(scores.cpu().numpy())
 
                 for cls in range(num_classes):
                     tp[cls] += ((predicted == cls) & (data_y == cls)).sum().item()
                     fp[cls] += ((predicted == cls) & (data_y != cls)).sum().item()
                     fn[cls] += ((predicted != cls) & (data_y == cls)).sum().item()
+                    tn[cls] += ((predicted != cls) & (data_y != cls)).sum().item()
 
         val_accuracy = val_correct / val_total
         macro_precision = sum([safe_division(tp[cls], tp[cls] + fp[cls]) for cls in range(num_classes)]) / num_classes
         macro_recall = sum([safe_division(tp[cls], tp[cls] + fn[cls]) for cls in range(num_classes)]) / num_classes
+        macro_fpr = sum([safe_division(fp[cls], fp[cls] + tn[cls]) for cls in range(num_classes)]) / num_classes
+        macro_fnr = sum([safe_division(fn[cls], fn[cls] + tp[cls]) for cls in range(num_classes)]) / num_classes
         macro_f1 = sum([
             safe_division(
-                2 * safe_division(tp[cls], tp[cls] + fp[cls]) * safe_division(tp[cls], tp[cls] + fn[cls]),
-                safe_division(tp[cls], tp[cls] + fp[cls]) + safe_division(tp[cls], tp[cls] + fn[cls])
+                2 * (macro_precision * macro_recall),
+                (macro_precision + macro_recall)
             )
-            for cls in range(num_classes)
-        ]) / num_classes
+        ])
 
         if epoch == opt.n_epochs - 1:  # Last epoch
             sum_pre += macro_precision
             sum_rec += macro_recall
             sum_F1 += macro_f1
             sum_acc += val_accuracy
+            sum_fpr += macro_fpr
+            sum_fnr += macro_fnr
 
-        logging.info(f"Macro-Averaged Metrics: Precision={macro_precision:.4f}, Recall={macro_recall:.4f}, F1 Score={macro_f1:.4f}, Accuracy={val_accuracy:.4f}")
+        logging.info(f"Macro-Averaged Metrics: Precision={macro_precision:.4f}, Recall={macro_recall:.4f}, F1 Score={macro_f1:.4f}")
+        logging.info(f"                       Accuracy={val_accuracy:.4f}, FPR={macro_fpr:.4f}, FNR={macro_fnr:.4f}")
 
-    # Generate confusion matrix after all validation batches
+    # Generate confusion matrix and ROC curve plots after all validation batches
     plot_confusion_matrix(
         y_true=np.array(all_labels),
         y_pred=np.array(all_preds),
         class_names=[f"Class {i}" for i in range(num_classes)],
+        fold=fold,
+        output_dir="./output"
+    )
+    plot_roc_curves(
+        y_true=np.array(all_labels),
+        y_scores=np.array(all_scores),
+        n_classes=num_classes,
         fold=fold,
         output_dir="./output"
     )
@@ -232,6 +307,13 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
     logging.info(f"Model saved at {model_save_path}")
 
 # Final metrics
-logging.info(f"Final Metrics: Precision={sum_pre / opt.k_folds:.4f}, Recall={sum_rec / opt.k_folds:.4f}, F1 Score={sum_F1 / opt.k_folds:.4f}, Accuracy={sum_acc / opt.k_folds:.4f}")
+logging.info(f"Final Macro-Averaged Metrics across {opt.k_folds} Folds:")
+logging.info(f"  Precision: {sum_pre / opt.k_folds:.4f}")
+logging.info(f"  Recall:    {sum_rec / opt.k_folds:.4f}")
+logging.info(f"  F1 Score:  {sum_F1 / opt.k_folds:.4f}")
+logging.info(f"  Accuracy:  {sum_acc / opt.k_folds:.4f}")
+logging.info(f"  FPR:       {sum_fpr / opt.k_folds:.4f}")
+logging.info(f"  FNR:       {sum_fnr / opt.k_folds:.4f}")
+logging.info("A lower FPR (fewer false alarms) and FNR (fewer missed attacks) are critical for a production-ready IDS.")
 all_times_array = np.array(all_time)
 logging.info(f"Average item time: {all_times_array.mean():.4f}")
