@@ -72,7 +72,7 @@ opt = parser.parse_args()
 device = torch.device("cuda:0")
 
 # Load dataset
-path = 'data/owndata/merged/all.npy'
+path = 'final_dataset/final_dataset.npy'
 source_data = np.load(path)
 data = source_data[:, :-1]
 label = source_data[:, -1]
@@ -113,7 +113,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
     valdataloader = DataLoader(torch_data_val, batch_size=1024, shuffle=False)
 
     # Initialize the model for each fold
-    model = AttackDetectionModel_no_embedding_pos(num_classes=4).to(device)
+    model = MambaCAN_2Direction(num_classes=4).to(device)
 
     # Loss function
     if opt.loss_type == 'MSE':

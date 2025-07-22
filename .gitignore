@@ -3,3 +3,6 @@
 *.zip
 modi*.txt
 MIDS/diffsuion/*
+dataset
+*.npy
+*.pyc
