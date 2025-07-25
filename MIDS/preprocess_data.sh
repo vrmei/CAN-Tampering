@@ -34,7 +34,7 @@ PROCESSED_DATA_ROOT="./data_processed"
 # --- Parameter Matrices for Attack Simulation ---
 MODIFY_X_VALUES=(2 5 10 25 50 100)
 MODIFY_TYPES=("CANID" "payload" "Both")
-TARGET_CANIDS_LIST=("0x102" "0x3d9" "0x102,0x3d9")
+TARGET_CANIDS_LIST=("0x102" "0x132" "0x102,0x132")
 
 # --- Other Parameters ---
 GROUP_SIZE=100

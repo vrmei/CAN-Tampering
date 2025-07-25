@@ -18,16 +18,20 @@ from tqdm import tqdm
 from modules.model import AttackDetectionModel_Sincos, AttackDetectionModel_no_pos, AttackDetectionModel_no_attn, AttackDetectionModel_no_conv_pos, AttackDetectionModel_no_embedding_pos
 from modules.model import AttackDetectionModel, AttackDetectionModel_Sincos_Fre_EMB, AttackDetectionModel_Sincos_Fre, AttackDetectionModel_LSTM
 from modules.model import MambaCAN, MambaCAN_noconv, MambaCAN_noid, MambaCAN_Only, MambaCAN_2Direction, MambaCAN_2Direction_1conv, MambaCAN_2Direction_Fre
+from data_loader import ROADDataset
 import logging
 from sklearn.model_selection import KFold
 from sklearn.utils.class_weight import compute_class_weight
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from itertools import cycle
 import torch.nn.functional as F
+
+# Enable anomaly detection to get more detailed error messages on NaN issues.
+torch.autograd.set_detect_anomaly(True)
 
 class FocalLoss(nn.Module):
     """
@@ -160,34 +164,43 @@ logging.basicConfig(level=logging.INFO,
 
 # Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--loss_type", type=str, default='Focal', choices=['CE', 'Focal'], help="Loss function type (CE, Focal)")
+parser.add_argument("--loss_type", type=str, default='CE', choices=['CE', 'Focal'], help="Loss function type (CE, Focal)")
 parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
-parser.add_argument("--n_classes", type=int, default=4, help="Number of output classes")
-parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
+parser.add_argument("--n_classes", type=int, default=2, help="Number of output classes")
+parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
+parser.add_argument("--dataset", type=str, default='road', choices=['road', 'own'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
 device = torch.device("cuda:0")
 
-# Load dataset
-path = 'final_dataset/final_dataset.npy'
-source_data = np.load(path)
-data = source_data[:, :-1]
-label = source_data[:, -1]
-
 # Dataset class
 class GetDataset(Dataset):
     def __init__(self, data_root, data_label):
-        self.data = torch.tensor(data_root, dtype=torch.float32)
-        self.label = torch.tensor(data_label, dtype=torch.long)
+        self.data = data_root
+        self.label = data_label
 
     def __getitem__(self, index):
-        return self.data[index], self.label[index]
+        # Convert to tensor on the fly from the numpy/memmap array
+        return torch.tensor(self.data[index], dtype=torch.float32), torch.tensor(self.label[index], dtype=torch.long)
 
     def __len__(self):
         return len(self.data)
+
+if opt.dataset == 'road':
+    # Load dataset
+    dataset_root = './data/road'
+    full_dataset = ROADDataset(data_path=dataset_root, chunk_size=100, num_features=23)
+elif opt.dataset == 'own':
+    # Load dataset
+    path = 'final_dataset/final_dataset.npy'
+    source_data = np.load(path)
+    data = source_data[:, :-1]
+    label = source_data[:, -1]
+    full_dataset = GetDataset(data, label)
+
 
 # K-Fold Cross Validation
 kf = KFold(n_splits=opt.k_folds, shuffle=True, random_state=42)
@@ -200,39 +213,52 @@ sum_rec, sum_pre, sum_F1, sum_acc = 0, 0, 0, 0
 sum_fpr, sum_fnr = 0, 0 # Initialize sums for new metrics
 all_time = []
 
-for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
+for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     logging.info(f"\nTraining fold {fold + 1}/{opt.k_folds}")
 
-    # Split data into train and validation sets for this fold
-    train_data, val_data = data[train_idx], data[val_idx]
-    train_label, val_label = label[train_idx], label[val_idx]
+    # Create data subsets for this fold
+    train_subset = Subset(full_dataset, train_idx)
+    val_subset = Subset(full_dataset, val_idx)
 
-    # Create DataLoader for this fold
-    torch_data_train = GetDataset(train_data, train_label)
-    torch_data_val = GetDataset(val_data, val_label)
-    traindataloader = DataLoader(torch_data_train, batch_size=1024, shuffle=True)
-    valdataloader = DataLoader(torch_data_val, batch_size=1024, shuffle=False)
+    # Create DataLoader for this fold from the loaded/created numpy arrays
+    traindataloader = DataLoader(train_subset, batch_size=1024, shuffle=True)
+    valdataloader = DataLoader(val_subset, batch_size=1024, shuffle=False)
 
     # Initialize the model for each fold
-    model = MambaCAN_2Direction(num_classes=4).to(device)
+    if opt.dataset == 'road':
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=22).to(device)
+    elif opt.dataset == 'own':
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
 
     # Loss function
     if opt.loss_type == 'MSE':
         criterion = nn.MSELoss()
     elif opt.loss_type == 'CE':
+        # Efficiently calculate class weights from the numpy array of labels
+        if opt.dataset == 'own':
+            y_train = full_dataset.label[train_idx]
+        else:
+            y_train = np.array([label for _, label in train_subset])
+        
+        possible_classes = np.arange(opt.n_classes)
+
         class_weights = compute_class_weight(
             class_weight='balanced',
-            classes=np.arange(opt.n_classes),
-            y=np.concatenate([labels.numpy() for _, labels in traindataloader])
+            classes=possible_classes,
+            y=y_train
         )
         class_weights = torch.FloatTensor(class_weights).to(device)
         criterion = nn.CrossEntropyLoss(weight=class_weights)
     elif opt.loss_type == 'Focal':
-        # For Focal Loss, you can still apply class weighting via the 'alpha' parameter.
-        # Here we calculate weights similarly to CE and can pass them to FocalLoss if needed.
-        y_train = np.concatenate([labels.numpy() for _, labels in traindataloader])
-        unique_classes = np.unique(y_train)
-        class_weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
+        # Calculate weights similarly for Focal Loss
+        if opt.dataset == 'own':
+            y_train = full_dataset.label[train_idx]
+        else:
+            y_train = np.array([label for _, label in train_subset])
+        
+        possible_classes = np.arange(opt.n_classes)
+
+        class_weights = compute_class_weight(class_weight='balanced', classes=possible_classes, y=y_train)
         # The alpha parameter in FocalLoss can be a list of weights per class.
         # Note: A tensor of weights is passed to alpha.
         criterion = FocalLoss(alpha=torch.tensor(class_weights, dtype=torch.float32).to(device), gamma=opt.gamma)
@@ -263,7 +289,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(data)):
             total_time += end_time - start_time
 
             loss = criterion(outputs, data_y)
+            
             loss.backward()
+            # Clip gradients to prevent exploding gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
 
             _, predicted = torch.max(outputs, 1)

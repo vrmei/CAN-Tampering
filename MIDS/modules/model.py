@@ -1541,9 +1541,11 @@ class MambaCAN(nn.Module):
         # Mamba
         self.MambaLayer = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=16, d_conv=4, expand=2,)
         
+        self.norm = nn.LayerNorm(embed_dim + hidden_dim * 2)
+        
         # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(embed_dim * 2, hidden_dim),
+            nn.Linear((embed_dim + hidden_dim * 2), hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)
@@ -1578,6 +1580,7 @@ class MambaCAN(nn.Module):
         # Max pooling over sequence
         pooled_feat = torch.max(attention_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)
         
+        pooled_feat = self.norm(pooled_feat)
         # Classification
         out = self.fc(pooled_feat)  # Shape: (batch_size, num_classes)
         
@@ -1759,7 +1762,7 @@ class MambaCAN_2Direction_1conv(nn.Module):
         # Mamba
         self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=4, expand=2,)
         self.MambaLayer_backward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=4, expand=2,)
-        
+
         # Fully connected layers
         self.fc = nn.Sequential(
             nn.Linear(embed_dim * 2, hidden_dim),
@@ -1809,7 +1812,7 @@ class MambaCAN_2Direction_1conv(nn.Module):
 class MambaCAN_2Direction(nn.Module):
 
     
-    def __init__(self, input_width=1, embed_dim=256, data_dim=8, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
+    def __init__(self, input_width=1, embed_dim=256, data_dim=22, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
         super(MambaCAN_2Direction, self).__init__()
         
         # Embedding layer for IDs
@@ -1820,6 +1823,9 @@ class MambaCAN_2Direction(nn.Module):
             nn.Dropout(dropout)
         )
         
+        # Normalization for input data
+        self.input_norm = nn.BatchNorm1d(data_dim)
+
         # Multiple 1D convolutional layers for feature extraction
         self.data_conv1 = nn.Conv1d(in_channels=data_dim, out_channels=hidden_dim, kernel_size=3, padding=1)
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
@@ -1830,15 +1836,14 @@ class MambaCAN_2Direction(nn.Module):
         
         # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(embed_dim * 2, hidden_dim),
+            nn.Linear((embed_dim + hidden_dim * 2), hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)
         )
     
     def forward(self, x):
-        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        x = x.view(x.size(0), 100, 9)
+        # Input `x` is assumed to have a shape of (batch_size, seq_len, features)
         
         # Split ID and data
         id_data = x[:, :, 0]  # Shape: (batch_size, 100)
@@ -1851,7 +1856,8 @@ class MambaCAN_2Direction(nn.Module):
         id_embed = self.embedding_layer(id_data)  # Shape: (batch_size, 100, embed_dim)
         
         # Process data with convolution
-        data = data.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
+        data = data.permute(0, 2, 1)  # Change to (batch_size, data_dim, seq_len)
+        data = self.input_norm(data)  # Normalize input data
         data_feat = F.relu(self.data_conv1(data))  # Shape: (batch_size, hidden_dim, 100)
         data_feat = F.relu(self.data_conv2(data_feat))  # Shape: (batch_size, hidden_dim * 2, 100)
         data_feat = data_feat.permute(0, 2, 1)  # Change back to (batch_size, 100, hidden_dim * 2)
@@ -1909,7 +1915,7 @@ class MambaCAN_2Direction_Fre(nn.Module):
     
     def forward(self, x):
         # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        x = x.view(x.size(0), 100, 9)
+        x = x.view(x.size(0), 100, 23)
         
         # Split ID and data
         id_data = x[:, :, 0]  # Shape: (batch_size, 100)
@@ -1939,6 +1945,7 @@ class MambaCAN_2Direction_Fre(nn.Module):
         # Max pooling over sequence
         pooled_feat = torch.max(Mamba_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)
         
+        pooled_feat = self.norm(pooled_feat)
         # Classification
         out = self.fc(pooled_feat)  # Shape: (batch_size, num_classes)
         

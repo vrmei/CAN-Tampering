@@ -6,3 +6,7 @@ MIDS/diffsuion/*
 dataset
 *.npy
 *.pyc
+MIDS/data/*
+MIDS/data_processed/*
+MIDS/finaldataset/*
+*.pth
