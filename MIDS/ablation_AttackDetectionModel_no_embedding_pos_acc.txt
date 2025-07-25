@@ -4668,3 +4668,8 @@ Training fold 1/5
 2025-07-25 17:16:04,251 - INFO - Macro-Averaged Metrics: Precision=0.9904, Recall=0.9986, F1 Score=0.9944
 2025-07-25 17:16:04,251 - INFO -                        Accuracy=0.9978, FPR=0.0014, FNR=0.0014
 2025-07-25 17:16:04,251 - INFO - Epoch [43/50]
+2025-07-25 17:16:37,316 - INFO - Training Loss: 0.0025, Accuracy: 0.9989
+2025-07-25 17:16:37,316 - INFO - Item time: 0.0396
+2025-07-25 17:16:40,148 - INFO - Macro-Averaged Metrics: Precision=0.9914, Recall=0.9988, F1 Score=0.9951
+2025-07-25 17:16:40,148 - INFO -                        Accuracy=0.9981, FPR=0.0012, FNR=0.0012
+2025-07-25 17:16:40,148 - INFO - Epoch [44/50]
