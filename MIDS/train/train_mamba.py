@@ -98,6 +98,26 @@ def plot_roc_curves(y_true, y_scores, n_classes, fold, output_dir="./output"):
     a detailed view of the trade-off between detecting true positives and avoiding
     false alarms, which is critical for security applications.
     """
+    if n_classes == 2:
+        # For binary classification, compute ROC for the positive class (class 1)
+        fpr, tpr, _ = roc_curve(y_true, y_scores[:, 1])
+        roc_auc = auc(fpr, tpr)
+        
+        plt.figure(figsize=(10, 8))
+        plt.plot(fpr, tpr, color='darkorange', lw=2,
+                 label='ROC curve (area = {0:0.2f})'.format(roc_auc))
+        plt.plot([0, 1], [0, 1], 'k--', lw=2, label='No-Skill (Luck)')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate (FPR)', fontsize=12)
+        plt.ylabel('True Positive Rate (TPR)', fontsize=12)
+        plt.title(f'Receiver Operating Characteristic (ROC) for Fold {fold + 1}', fontsize=14)
+        plt.legend(loc="lower right")
+        plt.grid(True)
+        plt.savefig(f"{output_dir}/roc_curve_fold_{fold + 1}_{log_file}.png")
+        plt.close()
+        return
+
     # Binarize the labels for multi-class ROC analysis
     y_true_binarized = label_binarize(y_true, classes=np.arange(n_classes))
 
@@ -165,7 +185,7 @@ logging.basicConfig(level=logging.INFO,
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', choices=['CE', 'Focal'], help="Loss function type (CE, Focal)")
-parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
+parser.add_argument("--n_epochs", type=int, default=30, help="Number of training epochs")
 parser.add_argument("--n_classes", type=int, default=2, help="Number of output classes")
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
