@@ -10,3 +10,4 @@ MIDS/data/*
 MIDS/data_processed/*
 MIDS/finaldataset/*
 *.pth
+*.txt
