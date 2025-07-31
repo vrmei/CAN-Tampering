@@ -20,6 +20,7 @@ from modules.model import AttackDetectionModel, AttackDetectionModel_Sincos_Fre_
 from modules.model import MambaCAN, MambaCAN_noconv, MambaCAN_noid, MambaCAN_Only, MambaCAN_2Direction, MambaCAN_2Direction_1conv, MambaCAN_2Direction_Fre
 from data_loader import ROADDataset
 from crysys_data_loader import CrySySDataset
+from otids_data_loader import OTIDSDataset
 import logging
 from sklearn.model_selection import KFold
 from sklearn.utils.class_weight import compute_class_weight
@@ -191,7 +192,7 @@ parser.add_argument("--n_classes", type=int, default=2, help="Number of output c
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
-parser.add_argument("--dataset", type=str, default='crysys', choices=['road', 'own', 'crysys'], help="Dataset to use")
+parser.add_argument("--dataset", type=str, default='otids', choices=['road', 'own', 'crysys', 'otids'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
@@ -225,6 +226,9 @@ elif opt.dataset == 'crysys':
     dataset_root = './data/CrySyS'
     # For CrySyS, num_features = 1 ID + 8 Data bytes = 9
     full_dataset = CrySySDataset(data_path=dataset_root, chunk_size=100, num_features=9)
+elif opt.dataset == 'otids':
+    dataset_root = './data/OTIDS'
+    full_dataset = OTIDSDataset(data_path=dataset_root, chunk_size=100)
 
 
 # K-Fold Cross Validation
@@ -255,6 +259,8 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     elif opt.dataset == 'own':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'crysys':
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+    elif opt.dataset == 'otids':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
 
     # Loss function
