@@ -21,6 +21,7 @@ from modules.model import MambaCAN, MambaCAN_noconv, MambaCAN_noid, MambaCAN_Onl
 from data_loader import ROADDataset
 from crysys_data_loader import CrySySDataset
 from otids_data_loader import OTIDSDataset
+from can_train_and_test_data_loader import CanTrainAndTestDataset
 import logging
 from sklearn.model_selection import KFold
 from sklearn.utils.class_weight import compute_class_weight
@@ -192,7 +193,7 @@ parser.add_argument("--n_classes", type=int, default=2, help="Number of output c
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
-parser.add_argument("--dataset", type=str, default='otids', choices=['road', 'own', 'crysys', 'otids'], help="Dataset to use")
+parser.add_argument("--dataset", type=str, default='cantrainandtest', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
@@ -213,7 +214,7 @@ class GetDataset(Dataset):
 
 if opt.dataset == 'road':
     # Load dataset
-    dataset_root = './data/road'
+    dataset_root = os.path.join(parent_dir, 'data', 'road')
     full_dataset = ROADDataset(data_path=dataset_root, chunk_size=100, num_features=23)
 elif opt.dataset == 'own':
     # Load dataset
@@ -223,12 +224,15 @@ elif opt.dataset == 'own':
     label = source_data[:, -1]
     full_dataset = GetDataset(data, label)
 elif opt.dataset == 'crysys':
-    dataset_root = './data/CrySyS'
+    dataset_root = os.path.join(parent_dir, 'data', 'CrySyS')
     # For CrySyS, num_features = 1 ID + 8 Data bytes = 9
     full_dataset = CrySySDataset(data_path=dataset_root, chunk_size=100, num_features=9)
 elif opt.dataset == 'otids':
-    dataset_root = './data/OTIDS'
+    dataset_root = os.path.join(parent_dir, 'data', 'OTIDS')
     full_dataset = OTIDSDataset(data_path=dataset_root, chunk_size=100)
+elif opt.dataset == 'cantrainandtest':
+    dataset_root = os.path.join(parent_dir, 'data', 'can-train-and-test')
+    full_dataset = CanTrainAndTestDataset(data_path=dataset_root, chunk_size=100, num_features=9)
 
 
 # K-Fold Cross Validation
@@ -261,6 +265,8 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     elif opt.dataset == 'crysys':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'otids':
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+    elif opt.dataset == 'cantrainandtest':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
 
     # Loss function
