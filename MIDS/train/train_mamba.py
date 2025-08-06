@@ -193,7 +193,7 @@ parser.add_argument("--n_classes", type=int, default=2, help="Number of output c
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
-parser.add_argument("--dataset", type=str, default='cantrainandtest', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
+parser.add_argument("--dataset", type=str, default='own', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
@@ -383,27 +383,54 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
                     tn[cls] += ((predicted != cls) & (data_y != cls)).sum().item()
 
         val_accuracy = val_correct / val_total
-        macro_precision = sum([safe_division(tp[cls], tp[cls] + fp[cls]) for cls in range(num_classes)]) / num_classes
-        macro_recall = sum([safe_division(tp[cls], tp[cls] + fn[cls]) for cls in range(num_classes)]) / num_classes
-        macro_fpr = sum([safe_division(fp[cls], fp[cls] + tn[cls]) for cls in range(num_classes)]) / num_classes
-        macro_fnr = sum([safe_division(fn[cls], fn[cls] + tp[cls]) for cls in range(num_classes)]) / num_classes
-        macro_f1 = sum([
-            safe_division(
-                2 * (macro_precision * macro_recall),
-                (macro_precision + macro_recall)
-            )
-        ])
+
+        if opt.dataset == 'own':  # Multi-class case
+            # Use macro-averaging for multi-class and also fix F1 calculation
+            per_class_precision = [safe_division(tp[cls], tp[cls] + fp[cls]) for cls in range(num_classes)]
+            per_class_recall = [safe_division(tp[cls], tp[cls] + fn[cls]) for cls in range(num_classes)]
+            per_class_fpr = [safe_division(fp[cls], fp[cls] + tn[cls]) for cls in range(num_classes)]
+            per_class_fnr = [safe_division(fn[cls], fn[cls] + tp[cls]) for cls in range(num_classes)]
+            
+            precision = sum(per_class_precision) / num_classes
+            recall = sum(per_class_recall) / num_classes
+            fpr = sum(per_class_fpr) / num_classes
+            fnr = sum(per_class_fnr) / num_classes
+            
+            per_class_f1 = [safe_division(2 * p * r, p + r) if (p + r) > 0 else 0 for p, r in zip(per_class_precision, per_class_recall)]
+            f1_score = sum(per_class_f1) / num_classes
+            
+            log_prefix = "Macro-Averaged"
+        
+        else:  # Binary classification case
+            # Metrics for the positive (attack) class, assuming class 1 is the attack class
+            positive_class = 1
+            # Check if positive_class index is valid
+            if positive_class < num_classes:
+                tp_pos = tp[positive_class]
+                fp_pos = fp[positive_class]
+                fn_pos = fn[positive_class]
+                tn_pos = tn[positive_class]
+
+                precision = safe_division(tp_pos, tp_pos + fp_pos)
+                recall = safe_division(tp_pos, tp_pos + fn_pos)  # Also TPR
+                f1_score = safe_division(2 * precision * recall, precision + recall)
+                fpr = safe_division(fp_pos, fp_pos + tn_pos)
+                fnr = safe_division(fn_pos, fn_pos + tp_pos)
+            else: # Fallback for safety, though should not happen in binary case
+                precision, recall, f1_score, fpr, fnr = 0, 0, 0, 0, 0
+            
+            log_prefix = "Metrics for Attack Class"
 
         if epoch == opt.n_epochs - 1:  # Last epoch
-            sum_pre += macro_precision
-            sum_rec += macro_recall
-            sum_F1 += macro_f1
+            sum_pre += precision
+            sum_rec += recall
+            sum_F1 += f1_score
             sum_acc += val_accuracy
-            sum_fpr += macro_fpr
-            sum_fnr += macro_fnr
+            sum_fpr += fpr
+            sum_fnr += fnr
 
-        logging.info(f"Macro-Averaged Metrics: Precision={macro_precision:.4f}, Recall={macro_recall:.4f}, F1 Score={macro_f1:.4f}")
-        logging.info(f"                       Accuracy={val_accuracy:.4f}, FPR={macro_fpr:.4f}, FNR={macro_fnr:.4f}")
+        logging.info(f"{log_prefix} Metrics: Precision={precision:.4f}, Recall={recall:.4f}, F1 Score={f1_score:.4f}")
+        logging.info(f"                        Accuracy={val_accuracy:.4f}, FPR={fpr:.4f}, FNR={fnr:.4f}")
 
     # Generate confusion matrix and ROC curve plots after all validation batches
     plot_confusion_matrix(
@@ -426,7 +453,8 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     logging.info(f"Model saved at {model_save_path}")
 
 # Final metrics
-logging.info(f"Final Macro-Averaged Metrics across {opt.k_folds} Folds:")
+    log_prefix_final = "Final Macro-Averaged" if opt.dataset == 'own' else "Final Metrics for Attack Class"
+    logging.info(f"{log_prefix_final} Metrics across {opt.k_folds} Folds:")
 logging.info(f"  Precision: {sum_pre / opt.k_folds:.4f}")
 logging.info(f"  Recall:    {sum_rec / opt.k_folds:.4f}")
 logging.info(f"  F1 Score:  {sum_F1 / opt.k_folds:.4f}")
