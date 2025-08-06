@@ -193,7 +193,7 @@ parser.add_argument("--n_classes", type=int, default=2, help="Number of output c
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
-parser.add_argument("--dataset", type=str, default='own', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
+parser.add_argument("--dataset", type=str, default='crysys', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
@@ -201,16 +201,32 @@ device = torch.device("cuda:0")
 
 # Dataset class
 class GetDataset(Dataset):
-    def __init__(self, data_root, data_label):
+    def __init__(self, data_root, data_label, chunk_size=100):
         self.data = data_root
         self.label = data_label
+        self.chunk_size = chunk_size
+        
+        # Ensure that data can be evenly divided into chunks
+        if len(self.data) % self.chunk_size != 0:
+            # Simple approach: truncate data to be divisible by chunk_size
+            num_chunks = len(self.data) // self.chunk_size
+            self.data = self.data[:num_chunks * self.chunk_size]
+            self.label = self.label[:num_chunks * self.chunk_size]
 
     def __getitem__(self, index):
-        # Convert to tensor on the fly from the numpy/memmap array
-        return torch.tensor(self.data[index], dtype=torch.float32), torch.tensor(self.label[index], dtype=torch.long)
+        start_idx = index * self.chunk_size
+        end_idx = start_idx + self.chunk_size
+        
+        chunk_data = self.data[start_idx:end_idx]
+        chunk_labels = self.label[start_idx:end_idx]
+
+        # Label for the chunk is 1 if any label in the chunk is 1 (or >0 for multi-class)
+        label = 1 if np.any(chunk_labels > 0) else 0
+
+        return torch.tensor(chunk_data, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
 
     def __len__(self):
-        return len(self.data)
+        return len(self.data) // self.chunk_size
 
 if opt.dataset == 'road':
     # Load dataset
@@ -222,7 +238,17 @@ elif opt.dataset == 'own':
     source_data = np.load(path)
     data = source_data[:, :-1]
     label = source_data[:, -1]
-    full_dataset = GetDataset(data, label)
+    full_dataset = GetDataset(data, label, chunk_size=100)
+
+    # Dynamically determine the number of classes from the 'own' dataset
+    # After chunking, the 'own' dataset becomes a binary problem (chunk contains attack or not)
+    actual_n_classes = 2
+    if opt.n_classes != actual_n_classes:
+        logging.warning(
+            f"Parameter --n_classes ({opt.n_classes}) is not 2. For chunk-based processing of 'own' dataset, "
+            f"this is treated as a binary classification. Overriding with 2."
+        )
+        opt.n_classes = actual_n_classes
 elif opt.dataset == 'crysys':
     dataset_root = os.path.join(parent_dir, 'data', 'CrySyS')
     # For CrySyS, num_features = 1 ID + 8 Data bytes = 9
@@ -275,6 +301,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     elif opt.loss_type == 'CE':
         # Efficiently calculate class weights from the numpy array of labels
         if opt.dataset == 'own':
+            print(train_idx)
             y_train = full_dataset.label[train_idx]
         else:
             y_train = np.array([label for _, label in train_subset])
