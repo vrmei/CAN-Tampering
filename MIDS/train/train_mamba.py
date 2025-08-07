@@ -188,7 +188,7 @@ logging.basicConfig(level=logging.INFO,
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--loss_type", type=str, default='CE', choices=['CE', 'Focal'], help="Loss function type (CE, Focal)")
-parser.add_argument("--n_epochs", type=int, default=30, help="Number of training epochs")
+parser.add_argument("--n_epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--n_classes", type=int, default=2, help="Number of output classes")
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
@@ -201,32 +201,18 @@ device = torch.device("cuda:0")
 
 # Dataset class
 class GetDataset(Dataset):
-    def __init__(self, data_root, data_label, chunk_size=100):
-        self.data = data_root
-        self.label = data_label
-        self.chunk_size = chunk_size
-        
-        # Ensure that data can be evenly divided into chunks
-        if len(self.data) % self.chunk_size != 0:
-            # Simple approach: truncate data to be divisible by chunk_size
-            num_chunks = len(self.data) // self.chunk_size
-            self.data = self.data[:num_chunks * self.chunk_size]
-            self.label = self.label[:num_chunks * self.chunk_size]
+    def __init__(self, data_tensor, label_tensor):
+        self.data = torch.tensor(data_tensor, dtype=torch.float32)
+        self.label = torch.tensor(label_tensor, dtype=torch.long)
 
     def __getitem__(self, index):
-        start_idx = index * self.chunk_size
-        end_idx = start_idx + self.chunk_size
-        
-        chunk_data = self.data[start_idx:end_idx]
-        chunk_labels = self.label[start_idx:end_idx]
-
-        # Label for the chunk is 1 if any label in the chunk is 1 (or >0 for multi-class)
-        label = 1 if np.any(chunk_labels > 0) else 0
-
-        return torch.tensor(chunk_data, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
+        # Dynamically reshape the data here
+        # Original shape per item: (900,)
+        # Reshaped to sequence: (100, 9)
+        return self.data[index].view(100, 9), self.label[index]
 
     def __len__(self):
-        return len(self.data) // self.chunk_size
+        return len(self.data)
 
 if opt.dataset == 'road':
     # Load dataset
@@ -238,17 +224,7 @@ elif opt.dataset == 'own':
     source_data = np.load(path)
     data = source_data[:, :-1]
     label = source_data[:, -1]
-    full_dataset = GetDataset(data, label, chunk_size=100)
-
-    # Dynamically determine the number of classes from the 'own' dataset
-    # After chunking, the 'own' dataset becomes a binary problem (chunk contains attack or not)
-    actual_n_classes = 2
-    if opt.n_classes != actual_n_classes:
-        logging.warning(
-            f"Parameter --n_classes ({opt.n_classes}) is not 2. For chunk-based processing of 'own' dataset, "
-            f"this is treated as a binary classification. Overriding with 2."
-        )
-        opt.n_classes = actual_n_classes
+    full_dataset = GetDataset(data, label)
 elif opt.dataset == 'crysys':
     dataset_root = os.path.join(parent_dir, 'data', 'CrySyS')
     # For CrySyS, num_features = 1 ID + 8 Data bytes = 9
@@ -300,17 +276,13 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
         criterion = nn.MSELoss()
     elif opt.loss_type == 'CE':
         # Efficiently calculate class weights from the numpy array of labels
-        if opt.dataset == 'own':
-            print(train_idx)
-            y_train = full_dataset.label[train_idx]
-        else:
-            y_train = np.array([label for _, label in train_subset])
+        y_train = np.array([label for _, label in train_subset])
         
-        possible_classes = np.arange(opt.n_classes)
+        unique_classes = np.unique(y_train)
 
         class_weights = compute_class_weight(
             class_weight='balanced',
-            classes=possible_classes,
+            classes=unique_classes,
             y=y_train
         )
         class_weights = torch.FloatTensor(class_weights).to(device)
@@ -322,9 +294,9 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
         else:
             y_train = np.array([label for _, label in train_subset])
         
-        possible_classes = np.arange(opt.n_classes)
+        unique_classes = np.unique(y_train)
 
-        class_weights = compute_class_weight(class_weight='balanced', classes=possible_classes, y=y_train)
+        class_weights = compute_class_weight(class_weight='balanced', classes=unique_classes, y=y_train)
         # The alpha parameter in FocalLoss can be a list of weights per class.
         # Note: A tensor of weights is passed to alpha.
         criterion = FocalLoss(alpha=torch.tensor(class_weights, dtype=torch.float32).to(device), gamma=opt.gamma)
@@ -478,7 +450,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     model_save_path = f"./output/{log_file}_fold{fold + 1}_model.pth"
     torch.save(model.state_dict(), model_save_path)
     logging.info(f"Model saved at {model_save_path}")
-
 # Final metrics
     log_prefix_final = "Final Macro-Averaged" if opt.dataset == 'own' else "Final Metrics for Attack Class"
     logging.info(f"{log_prefix_final} Metrics across {opt.k_folds} Folds:")
