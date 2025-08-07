@@ -1670,12 +1670,10 @@ class MambaCAN_noid(nn.Module):
         )
     
     def forward(self, x):
-        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        x = x.view(x.size(0), 100, 9)
-        
         # Split ID and data
         id_data = x[:, :, 0]  # Shape: (batch_size, 100)
         data = x[:, :, 1:]    # Shape: (batch_size, 100, 8)
+        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
         
         # Add an extra dimension to id_data for embedding
         id_data = id_data.unsqueeze(-1)  # Shape: (batch_size, 100, 1)

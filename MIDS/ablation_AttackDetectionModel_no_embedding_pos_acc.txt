@@ -11711,3 +11711,386 @@ Training fold 2/5
 2025-08-07 16:35:34,529 - INFO - 
 Training fold 1/5
 2025-08-07 16:36:00,547 - INFO - Epoch [1/50]
+2025-08-07 16:40:04,038 - INFO - Training Loss: 0.4638, Accuracy: 0.8801
+2025-08-07 16:40:04,038 - INFO - Item time: 0.0400
+2025-08-07 16:40:23,091 - INFO - Metrics for Attack Class Metrics: Precision=0.1139, Recall=0.7729, F1 Score=0.1985
+2025-08-07 16:40:23,092 - INFO -                         Accuracy=0.6119, FPR=0.3987, FNR=0.2271
+2025-08-07 16:40:23,092 - INFO - Epoch [2/50]
+2025-08-07 16:44:23,109 - INFO - Training Loss: 0.3582, Accuracy: 0.9196
+2025-08-07 16:44:23,109 - INFO - Item time: 0.0401
+2025-08-07 16:44:42,589 - INFO - Metrics for Attack Class Metrics: Precision=0.0977, Recall=0.8461, F1 Score=0.1752
+2025-08-07 16:44:42,589 - INFO -                         Accuracy=0.5046, FPR=0.5180, FNR=0.1539
+2025-08-07 16:44:42,589 - INFO - Epoch [3/50]
+2025-08-07 16:48:42,055 - INFO - Training Loss: 0.3068, Accuracy: 0.9151
+2025-08-07 16:48:42,055 - INFO - Item time: 0.0402
+2025-08-07 16:49:01,786 - INFO - Metrics for Attack Class Metrics: Precision=0.2124, Recall=0.7989, F1 Score=0.3356
+2025-08-07 16:49:01,786 - INFO -                         Accuracy=0.8033, FPR=0.1964, FNR=0.2011
+2025-08-07 16:49:01,786 - INFO - Epoch [4/50]
+2025-08-07 16:53:02,059 - INFO - Training Loss: 0.2620, Accuracy: 0.9186
+2025-08-07 16:53:02,059 - INFO - Item time: 0.0402
+2025-08-07 16:53:21,933 - INFO - Metrics for Attack Class Metrics: Precision=0.3823, Recall=0.8875, F1 Score=0.5344
+2025-08-07 16:53:21,933 - INFO -                         Accuracy=0.9038, FPR=0.0951, FNR=0.1125
+2025-08-07 16:53:21,933 - INFO - Epoch [5/50]
+2025-08-07 16:57:21,308 - INFO - Training Loss: 0.2218, Accuracy: 0.9306
+2025-08-07 16:57:21,308 - INFO - Item time: 0.0402
+2025-08-07 16:57:40,814 - INFO - Metrics for Attack Class Metrics: Precision=0.5035, Recall=0.8986, F1 Score=0.6453
+2025-08-07 16:57:40,814 - INFO -                         Accuracy=0.9386, FPR=0.0588, FNR=0.1014
+2025-08-07 16:57:40,814 - INFO - Epoch [6/50]
+2025-08-07 17:01:40,447 - INFO - Training Loss: 0.1907, Accuracy: 0.9412
+2025-08-07 17:01:40,447 - INFO - Item time: 0.0402
+2025-08-07 17:01:59,837 - INFO - Metrics for Attack Class Metrics: Precision=0.3497, Recall=0.9445, F1 Score=0.5104
+2025-08-07 17:01:59,837 - INFO -                         Accuracy=0.8874, FPR=0.1164, FNR=0.0555
+2025-08-07 17:01:59,838 - INFO - Epoch [7/50]
+2025-08-07 17:05:58,783 - INFO - Training Loss: 0.1653, Accuracy: 0.9492
+2025-08-07 17:05:58,783 - INFO - Item time: 0.0403
+2025-08-07 17:06:18,324 - INFO - Metrics for Attack Class Metrics: Precision=0.6264, Recall=0.9146, F1 Score=0.7436
+2025-08-07 17:06:18,324 - INFO -                         Accuracy=0.9608, FPR=0.0362, FNR=0.0854
+2025-08-07 17:06:18,325 - INFO - Epoch [8/50]
+2025-08-07 17:10:18,209 - INFO - Training Loss: 0.1447, Accuracy: 0.9555
+2025-08-07 17:10:18,209 - INFO - Item time: 0.0402
+2025-08-07 17:10:37,448 - INFO - Metrics for Attack Class Metrics: Precision=0.5684, Recall=0.9395, F1 Score=0.7083
+2025-08-07 17:10:37,448 - INFO -                         Accuracy=0.9519, FPR=0.0473, FNR=0.0605
+2025-08-07 17:10:37,448 - INFO - Epoch [9/50]
+2025-08-07 17:14:36,896 - INFO - Training Loss: 0.1291, Accuracy: 0.9593
+2025-08-07 17:14:36,897 - INFO - Item time: 0.0402
+2025-08-07 17:14:56,387 - INFO - Metrics for Attack Class Metrics: Precision=0.6851, Recall=0.9354, F1 Score=0.7910
+2025-08-07 17:14:56,388 - INFO -                         Accuracy=0.9693, FPR=0.0285, FNR=0.0646
+2025-08-07 17:14:56,388 - INFO - Epoch [10/50]
+2025-08-07 17:18:55,653 - INFO - Training Loss: 0.1131, Accuracy: 0.9642
+2025-08-07 17:18:55,653 - INFO - Item time: 0.0402
+2025-08-07 17:19:15,277 - INFO - Metrics for Attack Class Metrics: Precision=0.6379, Recall=0.9471, F1 Score=0.7623
+2025-08-07 17:19:15,277 - INFO -                         Accuracy=0.9633, FPR=0.0356, FNR=0.0529
+2025-08-07 17:19:15,277 - INFO - Epoch [11/50]
+2025-08-07 17:23:13,084 - INFO - Training Loss: 0.1015, Accuracy: 0.9672
+2025-08-07 17:23:13,084 - INFO - Item time: 0.0400
+2025-08-07 17:23:32,548 - INFO - Metrics for Attack Class Metrics: Precision=0.6518, Recall=0.9568, F1 Score=0.7754
+2025-08-07 17:23:32,548 - INFO -                         Accuracy=0.9655, FPR=0.0339, FNR=0.0432
+2025-08-07 17:23:32,548 - INFO - Epoch [12/50]
+2025-08-07 17:27:30,904 - INFO - Training Loss: 0.0902, Accuracy: 0.9700
+2025-08-07 17:27:30,905 - INFO - Item time: 0.0401
+2025-08-07 17:27:50,382 - INFO - Metrics for Attack Class Metrics: Precision=0.6807, Recall=0.9549, F1 Score=0.7948
+2025-08-07 17:27:50,382 - INFO -                         Accuracy=0.9693, FPR=0.0297, FNR=0.0451
+2025-08-07 17:27:50,383 - INFO - Epoch [13/50]
+2025-08-07 17:31:49,264 - INFO - Training Loss: 0.0807, Accuracy: 0.9726
+2025-08-07 17:31:49,264 - INFO - Item time: 0.0402
+2025-08-07 17:32:08,988 - INFO - Metrics for Attack Class Metrics: Precision=0.5834, Recall=0.9737, F1 Score=0.7297
+2025-08-07 17:32:08,988 - INFO -                         Accuracy=0.9551, FPR=0.0461, FNR=0.0263
+2025-08-07 17:32:08,988 - INFO - Epoch [14/50]
+2025-08-07 17:36:09,836 - INFO - Training Loss: 0.0718, Accuracy: 0.9752
+2025-08-07 17:36:09,836 - INFO - Item time: 0.0405
+2025-08-07 17:36:29,038 - INFO - Metrics for Attack Class Metrics: Precision=0.7202, Recall=0.9554, F1 Score=0.8213
+2025-08-07 17:36:29,039 - INFO -                         Accuracy=0.9742, FPR=0.0246, FNR=0.0446
+2025-08-07 17:36:29,039 - INFO - Epoch [15/50]
+2025-08-07 17:40:28,654 - INFO - Training Loss: 0.0651, Accuracy: 0.9771
+2025-08-07 17:40:28,654 - INFO - Item time: 0.0403
+2025-08-07 17:40:47,971 - INFO - Metrics for Attack Class Metrics: Precision=0.7200, Recall=0.9632, F1 Score=0.8240
+2025-08-07 17:40:47,971 - INFO -                         Accuracy=0.9744, FPR=0.0248, FNR=0.0368
+2025-08-07 17:40:47,971 - INFO - Epoch [16/50]
+2025-08-07 17:44:46,370 - INFO - Training Loss: 0.0571, Accuracy: 0.9794
+2025-08-07 17:44:46,370 - INFO - Item time: 0.0402
+2025-08-07 17:45:05,913 - INFO - Metrics for Attack Class Metrics: Precision=0.7572, Recall=0.9554, F1 Score=0.8448
+2025-08-07 17:45:05,913 - INFO -                         Accuracy=0.9782, FPR=0.0203, FNR=0.0446
+2025-08-07 17:45:05,913 - INFO - Epoch [17/50]
+2025-08-07 17:49:07,842 - INFO - Training Loss: 0.0519, Accuracy: 0.9813
+2025-08-07 17:49:07,842 - INFO - Item time: 0.0405
+2025-08-07 17:49:26,933 - INFO - Metrics for Attack Class Metrics: Precision=0.7909, Recall=0.9519, F1 Score=0.8640
+2025-08-07 17:49:26,933 - INFO -                         Accuracy=0.9814, FPR=0.0167, FNR=0.0481
+2025-08-07 17:49:26,933 - INFO - Epoch [18/50]
+2025-08-07 17:53:26,357 - INFO - Training Loss: 0.0459, Accuracy: 0.9830
+2025-08-07 17:53:26,357 - INFO - Item time: 0.0402
+2025-08-07 17:53:45,756 - INFO - Metrics for Attack Class Metrics: Precision=0.8376, Recall=0.9431, F1 Score=0.8872
+2025-08-07 17:53:45,756 - INFO -                         Accuracy=0.9851, FPR=0.0121, FNR=0.0569
+2025-08-07 17:53:45,756 - INFO - Epoch [19/50]
+2025-08-07 17:57:47,592 - INFO - Training Loss: 0.0411, Accuracy: 0.9847
+2025-08-07 17:57:47,593 - INFO - Item time: 0.0405
+2025-08-07 17:58:07,235 - INFO - Metrics for Attack Class Metrics: Precision=0.8887, Recall=0.9199, F1 Score=0.9040
+2025-08-07 17:58:07,235 - INFO -                         Accuracy=0.9879, FPR=0.0076, FNR=0.0801
+2025-08-07 17:58:07,235 - INFO - Epoch [20/50]
+2025-08-07 18:02:08,319 - INFO - Training Loss: 0.0375, Accuracy: 0.9862
+2025-08-07 18:02:08,319 - INFO - Item time: 0.0403
+2025-08-07 18:02:27,981 - INFO - Metrics for Attack Class Metrics: Precision=0.7877, Recall=0.9570, F1 Score=0.8641
+2025-08-07 18:02:27,981 - INFO -                         Accuracy=0.9813, FPR=0.0171, FNR=0.0430
+2025-08-07 18:02:27,981 - INFO - Epoch [21/50]
+2025-08-07 18:06:26,626 - INFO - Training Loss: 0.0340, Accuracy: 0.9874
+2025-08-07 18:06:26,627 - INFO - Item time: 0.0402
+2025-08-07 18:06:45,753 - INFO - Metrics for Attack Class Metrics: Precision=0.8502, Recall=0.9389, F1 Score=0.8924
+2025-08-07 18:06:45,754 - INFO -                         Accuracy=0.9859, FPR=0.0110, FNR=0.0611
+2025-08-07 18:06:45,754 - INFO - Epoch [22/50]
+2025-08-07 18:10:44,079 - INFO - Training Loss: 0.0319, Accuracy: 0.9883
+2025-08-07 18:10:44,080 - INFO - Item time: 0.0401
+2025-08-07 18:11:03,789 - INFO - Metrics for Attack Class Metrics: Precision=0.7963, Recall=0.9587, F1 Score=0.8700
+2025-08-07 18:11:03,789 - INFO -                         Accuracy=0.9822, FPR=0.0163, FNR=0.0413
+2025-08-07 18:11:03,789 - INFO - Epoch [23/50]
+2025-08-07 18:15:00,903 - INFO - Training Loss: 0.0281, Accuracy: 0.9895
+2025-08-07 18:15:00,903 - INFO - Item time: 0.0399
+2025-08-07 18:15:20,586 - INFO - Metrics for Attack Class Metrics: Precision=0.8285, Recall=0.9491, F1 Score=0.8847
+2025-08-07 18:15:20,587 - INFO -                         Accuracy=0.9846, FPR=0.0130, FNR=0.0509
+2025-08-07 18:15:20,587 - INFO - Epoch [24/50]
+2025-08-07 18:19:19,781 - INFO - Training Loss: 0.0269, Accuracy: 0.9903
+2025-08-07 18:19:19,781 - INFO - Item time: 0.0402
+2025-08-07 18:19:39,131 - INFO - Metrics for Attack Class Metrics: Precision=0.9041, Recall=0.9250, F1 Score=0.9144
+2025-08-07 18:19:39,132 - INFO -                         Accuracy=0.9892, FPR=0.0065, FNR=0.0750
+2025-08-07 18:19:39,132 - INFO - Epoch [25/50]
+2025-08-07 18:23:38,785 - INFO - Training Loss: 0.0245, Accuracy: 0.9912
+2025-08-07 18:23:38,785 - INFO - Item time: 0.0401
+2025-08-07 18:23:57,690 - INFO - Metrics for Attack Class Metrics: Precision=0.8692, Recall=0.9432, F1 Score=0.9047
+2025-08-07 18:23:57,690 - INFO -                         Accuracy=0.9876, FPR=0.0094, FNR=0.0568
+2025-08-07 18:23:57,691 - INFO - Epoch [26/50]
+2025-08-07 18:27:57,050 - INFO - Training Loss: 0.0221, Accuracy: 0.9921
+2025-08-07 18:27:57,051 - INFO - Item time: 0.0401
+2025-08-07 18:28:16,253 - INFO - Metrics for Attack Class Metrics: Precision=0.8430, Recall=0.9534, F1 Score=0.8948
+2025-08-07 18:28:16,253 - INFO -                         Accuracy=0.9861, FPR=0.0118, FNR=0.0466
+2025-08-07 18:28:16,254 - INFO - Epoch [27/50]
+2025-08-07 18:32:15,115 - INFO - Training Loss: 0.0206, Accuracy: 0.9927
+2025-08-07 18:32:15,115 - INFO - Item time: 0.0402
+2025-08-07 18:32:34,681 - INFO - Metrics for Attack Class Metrics: Precision=0.8749, Recall=0.9449, F1 Score=0.9085
+2025-08-07 18:32:34,681 - INFO -                         Accuracy=0.9882, FPR=0.0090, FNR=0.0551
+2025-08-07 18:32:34,682 - INFO - Epoch [28/50]
+2025-08-07 18:36:34,911 - INFO - Training Loss: 0.0196, Accuracy: 0.9932
+2025-08-07 18:36:34,912 - INFO - Item time: 0.0401
+2025-08-07 18:36:54,867 - INFO - Metrics for Attack Class Metrics: Precision=0.8451, Recall=0.9563, F1 Score=0.8972
+2025-08-07 18:36:54,867 - INFO -                         Accuracy=0.9864, FPR=0.0116, FNR=0.0437
+2025-08-07 18:36:54,867 - INFO - Epoch [29/50]
+2025-08-07 18:40:55,622 - INFO - Training Loss: 0.0180, Accuracy: 0.9937
+2025-08-07 18:40:55,623 - INFO - Item time: 0.0403
+2025-08-07 18:41:14,695 - INFO - Metrics for Attack Class Metrics: Precision=0.8941, Recall=0.9398, F1 Score=0.9164
+2025-08-07 18:41:14,695 - INFO -                         Accuracy=0.9893, FPR=0.0074, FNR=0.0602
+2025-08-07 18:41:14,695 - INFO - Epoch [30/50]
+2025-08-07 18:45:14,831 - INFO - Training Loss: 0.0170, Accuracy: 0.9942
+2025-08-07 18:45:14,831 - INFO - Item time: 0.0401
+2025-08-07 18:45:34,103 - INFO - Metrics for Attack Class Metrics: Precision=0.9224, Recall=0.9243, F1 Score=0.9233
+2025-08-07 18:45:34,103 - INFO -                         Accuracy=0.9905, FPR=0.0052, FNR=0.0757
+2025-08-07 18:45:34,103 - INFO - Epoch [31/50]
+2025-08-07 18:49:33,401 - INFO - Training Loss: 0.0164, Accuracy: 0.9946
+2025-08-07 18:49:33,401 - INFO - Item time: 0.0401
+2025-08-07 18:49:52,883 - INFO - Metrics for Attack Class Metrics: Precision=0.8580, Recall=0.9494, F1 Score=0.9014
+2025-08-07 18:49:52,883 - INFO -                         Accuracy=0.9871, FPR=0.0104, FNR=0.0506
+2025-08-07 18:49:52,884 - INFO - Epoch [32/50]
+2025-08-07 18:53:53,565 - INFO - Training Loss: 0.0149, Accuracy: 0.9949
+2025-08-07 18:53:53,565 - INFO - Item time: 0.0401
+2025-08-07 18:54:13,149 - INFO - Metrics for Attack Class Metrics: Precision=0.8815, Recall=0.9485, F1 Score=0.9138
+2025-08-07 18:54:13,149 - INFO -                         Accuracy=0.9889, FPR=0.0085, FNR=0.0515
+2025-08-07 18:54:13,150 - INFO - Epoch [33/50]
+2025-08-07 18:58:13,785 - INFO - Training Loss: 0.0138, Accuracy: 0.9954
+2025-08-07 18:58:13,785 - INFO - Item time: 0.0401
+2025-08-07 18:58:32,581 - INFO - Metrics for Attack Class Metrics: Precision=0.9153, Recall=0.9362, F1 Score=0.9256
+2025-08-07 18:58:32,581 - INFO -                         Accuracy=0.9906, FPR=0.0057, FNR=0.0638
+2025-08-07 18:58:32,582 - INFO - Epoch [34/50]
+2025-08-07 19:02:31,395 - INFO - Training Loss: 0.0137, Accuracy: 0.9955
+2025-08-07 19:02:31,395 - INFO - Item time: 0.0402
+2025-08-07 19:02:50,039 - INFO - Metrics for Attack Class Metrics: Precision=0.9039, Recall=0.9416, F1 Score=0.9224
+2025-08-07 19:02:50,040 - INFO -                         Accuracy=0.9901, FPR=0.0066, FNR=0.0584
+2025-08-07 19:02:50,040 - INFO - Epoch [35/50]
+2025-08-07 19:06:50,255 - INFO - Training Loss: 0.0126, Accuracy: 0.9958
+2025-08-07 19:06:50,255 - INFO - Item time: 0.0402
+2025-08-07 19:07:09,356 - INFO - Metrics for Attack Class Metrics: Precision=0.9114, Recall=0.9346, F1 Score=0.9229
+2025-08-07 19:07:09,356 - INFO -                         Accuracy=0.9903, FPR=0.0060, FNR=0.0654
+2025-08-07 19:07:09,357 - INFO - Epoch [36/50]
+2025-08-07 19:11:10,928 - INFO - Training Loss: 0.0115, Accuracy: 0.9962
+2025-08-07 19:11:10,929 - INFO - Item time: 0.0397
+2025-08-07 19:11:30,512 - INFO - Metrics for Attack Class Metrics: Precision=0.8976, Recall=0.9372, F1 Score=0.9170
+2025-08-07 19:11:30,512 - INFO -                         Accuracy=0.9895, FPR=0.0071, FNR=0.0628
+2025-08-07 19:11:30,513 - INFO - Epoch [37/50]
+2025-08-07 19:15:32,116 - INFO - Training Loss: 0.0120, Accuracy: 0.9962
+2025-08-07 19:15:32,116 - INFO - Item time: 0.0398
+2025-08-07 19:15:51,686 - INFO - Metrics for Attack Class Metrics: Precision=0.9279, Recall=0.9280, F1 Score=0.9279
+2025-08-07 19:15:51,686 - INFO -                         Accuracy=0.9910, FPR=0.0048, FNR=0.0720
+2025-08-07 19:15:51,686 - INFO - Epoch [38/50]
+2025-08-07 19:19:50,861 - INFO - Training Loss: 0.0109, Accuracy: 0.9965
+2025-08-07 19:19:50,862 - INFO - Item time: 0.0396
+2025-08-07 19:20:11,015 - INFO - Metrics for Attack Class Metrics: Precision=0.9134, Recall=0.9320, F1 Score=0.9226
+2025-08-07 19:20:11,015 - INFO -                         Accuracy=0.9903, FPR=0.0059, FNR=0.0680
+2025-08-07 19:20:11,016 - INFO - Epoch [39/50]
+2025-08-07 19:24:12,559 - INFO - Training Loss: 0.0101, Accuracy: 0.9967
+2025-08-07 19:24:12,559 - INFO - Item time: 0.0398
+2025-08-07 19:24:31,610 - INFO - Metrics for Attack Class Metrics: Precision=0.9047, Recall=0.9438, F1 Score=0.9238
+2025-08-07 19:24:31,610 - INFO -                         Accuracy=0.9903, FPR=0.0066, FNR=0.0562
+2025-08-07 19:24:31,611 - INFO - Epoch [40/50]
+2025-08-07 19:28:30,979 - INFO - Training Loss: 0.0098, Accuracy: 0.9969
+2025-08-07 19:28:30,980 - INFO - Item time: 0.0397
+2025-08-07 19:28:50,638 - INFO - Metrics for Attack Class Metrics: Precision=0.9053, Recall=0.9390, F1 Score=0.9219
+2025-08-07 19:28:50,638 - INFO -                         Accuracy=0.9901, FPR=0.0065, FNR=0.0610
+2025-08-07 19:28:50,639 - INFO - Epoch [41/50]
+2025-08-07 19:32:47,588 - INFO - Training Loss: 0.0096, Accuracy: 0.9971
+2025-08-07 19:32:47,588 - INFO - Item time: 0.0397
+2025-08-07 19:33:07,062 - INFO - Metrics for Attack Class Metrics: Precision=0.9597, Recall=0.9107, F1 Score=0.9346
+2025-08-07 19:33:07,062 - INFO -                         Accuracy=0.9921, FPR=0.0025, FNR=0.0893
+2025-08-07 19:33:07,062 - INFO - Epoch [42/50]
+2025-08-07 19:37:03,741 - INFO - Training Loss: 0.0090, Accuracy: 0.9972
+2025-08-07 19:37:03,741 - INFO - Item time: 0.0398
+2025-08-07 19:37:22,452 - INFO - Metrics for Attack Class Metrics: Precision=0.9197, Recall=0.9396, F1 Score=0.9296
+2025-08-07 19:37:22,452 - INFO -                         Accuracy=0.9911, FPR=0.0054, FNR=0.0604
+2025-08-07 19:37:22,452 - INFO - Epoch [43/50]
+2025-08-07 19:41:19,049 - INFO - Training Loss: 0.0084, Accuracy: 0.9974
+2025-08-07 19:41:19,049 - INFO - Item time: 0.0399
+2025-08-07 19:41:38,457 - INFO - Metrics for Attack Class Metrics: Precision=0.9376, Recall=0.9280, F1 Score=0.9327
+2025-08-07 19:41:38,457 - INFO -                         Accuracy=0.9917, FPR=0.0041, FNR=0.0720
+2025-08-07 19:41:38,457 - INFO - Epoch [44/50]
+2025-08-07 19:45:35,489 - INFO - Training Loss: 0.0082, Accuracy: 0.9975
+2025-08-07 19:45:35,489 - INFO - Item time: 0.0399
+2025-08-07 19:45:54,632 - INFO - Metrics for Attack Class Metrics: Precision=0.9314, Recall=0.9315, F1 Score=0.9314
+2025-08-07 19:45:54,632 - INFO -                         Accuracy=0.9915, FPR=0.0045, FNR=0.0685
+2025-08-07 19:45:54,632 - INFO - Epoch [45/50]
+2025-08-07 19:49:51,073 - INFO - Training Loss: 0.0081, Accuracy: 0.9976
+2025-08-07 19:49:51,073 - INFO - Item time: 0.0399
+2025-08-07 19:50:10,176 - INFO - Metrics for Attack Class Metrics: Precision=0.9426, Recall=0.9275, F1 Score=0.9350
+2025-08-07 19:50:10,176 - INFO -                         Accuracy=0.9920, FPR=0.0037, FNR=0.0725
+2025-08-07 19:50:10,176 - INFO - Epoch [46/50]
+2025-08-07 19:54:07,217 - INFO - Training Loss: 0.0072, Accuracy: 0.9977
+2025-08-07 19:54:07,217 - INFO - Item time: 0.0400
+2025-08-07 19:54:26,960 - INFO - Metrics for Attack Class Metrics: Precision=0.9248, Recall=0.9351, F1 Score=0.9300
+2025-08-07 19:54:26,961 - INFO -                         Accuracy=0.9912, FPR=0.0050, FNR=0.0649
+2025-08-07 19:54:26,961 - INFO - Epoch [47/50]
+2025-08-07 19:58:23,885 - INFO - Training Loss: 0.0074, Accuracy: 0.9979
+2025-08-07 19:58:23,886 - INFO - Item time: 0.0399
+2025-08-07 19:58:43,507 - INFO - Metrics for Attack Class Metrics: Precision=0.8657, Recall=0.9583, F1 Score=0.9097
+2025-08-07 19:58:43,507 - INFO -                         Accuracy=0.9882, FPR=0.0099, FNR=0.0417
+2025-08-07 19:58:43,507 - INFO - Epoch [48/50]
+2025-08-07 20:02:40,371 - INFO - Training Loss: 0.0069, Accuracy: 0.9980
+2025-08-07 20:02:40,371 - INFO - Item time: 0.0399
+2025-08-07 20:02:59,605 - INFO - Metrics for Attack Class Metrics: Precision=0.9395, Recall=0.9289, F1 Score=0.9342
+2025-08-07 20:02:59,605 - INFO -                         Accuracy=0.9919, FPR=0.0040, FNR=0.0711
+2025-08-07 20:02:59,606 - INFO - Epoch [49/50]
+2025-08-07 20:06:55,722 - INFO - Training Loss: 0.0067, Accuracy: 0.9981
+2025-08-07 20:06:55,722 - INFO - Item time: 0.0398
+2025-08-07 20:07:15,347 - INFO - Metrics for Attack Class Metrics: Precision=0.9600, Recall=0.9151, F1 Score=0.9370
+2025-08-07 20:07:15,347 - INFO -                         Accuracy=0.9924, FPR=0.0025, FNR=0.0849
+2025-08-07 20:07:15,347 - INFO - Epoch [50/50]
+2025-08-07 20:11:11,361 - INFO - Training Loss: 0.0064, Accuracy: 0.9981
+2025-08-07 20:11:11,361 - INFO - Item time: 0.0398
+2025-08-07 20:11:30,838 - INFO - Metrics for Attack Class Metrics: Precision=0.8952, Recall=0.9531, F1 Score=0.9232
+2025-08-07 20:11:30,838 - INFO -                         Accuracy=0.9901, FPR=0.0074, FNR=0.0469
+2025-08-07 20:11:31,190 - INFO - Model saved at ./output/ablation_AttackDetectionModel_no_embedding_pos_acc.txt_fold1_model.pth
+2025-08-07 20:11:31,190 - INFO - Final Metrics for Attack Class Metrics across 5 Folds:
+2025-08-07 20:11:31,221 - INFO - 
+Training fold 2/5
+2025-08-07 20:11:53,589 - INFO - Epoch [1/50]
+2025-08-07 20:15:50,183 - INFO - Training Loss: 0.4681, Accuracy: 0.8797
+2025-08-07 20:15:50,183 - INFO - Item time: 0.0398
+2025-08-07 20:16:08,811 - INFO - Metrics for Attack Class Metrics: Precision=0.5849, Recall=0.5888, F1 Score=0.5868
+2025-08-07 20:16:08,811 - INFO -                         Accuracy=0.9488, FPR=0.0275, FNR=0.4112
+2025-08-07 20:16:08,812 - INFO - Epoch [2/50]
+2025-08-07 20:20:03,288 - INFO - Training Loss: 0.3437, Accuracy: 0.9178
+2025-08-07 20:20:03,288 - INFO - Item time: 0.0395
+2025-08-07 20:20:22,581 - INFO - Metrics for Attack Class Metrics: Precision=0.6418, Recall=0.7216, F1 Score=0.6794
+2025-08-07 20:20:22,581 - INFO -                         Accuracy=0.9580, FPR=0.0265, FNR=0.2784
+2025-08-07 20:20:22,581 - INFO - Epoch [3/50]
+2025-08-07 20:24:18,266 - INFO - Training Loss: 0.2845, Accuracy: 0.9154
+2025-08-07 20:24:18,266 - INFO - Item time: 0.0397
+2025-08-07 20:24:37,364 - INFO - Metrics for Attack Class Metrics: Precision=0.4473, Recall=0.8606, F1 Score=0.5886
+2025-08-07 20:24:37,364 - INFO -                         Accuracy=0.9257, FPR=0.0700, FNR=0.1394
+2025-08-07 20:24:37,364 - INFO - Epoch [4/50]
+2025-08-07 20:28:33,132 - INFO - Training Loss: 0.2388, Accuracy: 0.9264
+2025-08-07 20:28:33,132 - INFO - Item time: 0.0398
+2025-08-07 20:28:52,158 - INFO - Metrics for Attack Class Metrics: Precision=0.5376, Recall=0.8608, F1 Score=0.6618
+2025-08-07 20:28:52,158 - INFO -                         Accuracy=0.9457, FPR=0.0487, FNR=0.1392
+2025-08-07 20:28:52,158 - INFO - Epoch [5/50]
+2025-08-07 20:32:48,222 - INFO - Training Loss: 0.2048, Accuracy: 0.9372
+2025-08-07 20:32:48,223 - INFO - Item time: 0.0397
+2025-08-07 20:33:07,818 - INFO - Metrics for Attack Class Metrics: Precision=0.4314, Recall=0.9078, F1 Score=0.5849
+2025-08-07 20:33:07,818 - INFO -                         Accuracy=0.9204, FPR=0.0787, FNR=0.0922
+2025-08-07 20:33:07,818 - INFO - Epoch [6/50]
+2025-08-07 20:37:05,892 - INFO - Training Loss: 0.1756, Accuracy: 0.9471
+2025-08-07 20:37:05,892 - INFO - Item time: 0.0398
+2025-08-07 20:37:25,307 - INFO - Metrics for Attack Class Metrics: Precision=0.5522, Recall=0.9199, F1 Score=0.6901
+2025-08-07 20:37:25,307 - INFO -                         Accuracy=0.9490, FPR=0.0491, FNR=0.0801
+2025-08-07 20:37:25,307 - INFO - Epoch [7/50]
+2025-08-07 20:41:22,292 - INFO - Training Loss: 0.1531, Accuracy: 0.9538
+2025-08-07 20:41:22,292 - INFO - Item time: 0.0397
+2025-08-07 20:41:42,046 - INFO - Metrics for Attack Class Metrics: Precision=0.5557, Recall=0.9324, F1 Score=0.6964
+2025-08-07 20:41:42,046 - INFO -                         Accuracy=0.9498, FPR=0.0491, FNR=0.0676
+2025-08-07 20:41:42,046 - INFO - Epoch [8/50]
+2025-08-07 20:45:39,063 - INFO - Training Loss: 0.1348, Accuracy: 0.9586
+2025-08-07 20:45:39,063 - INFO - Item time: 0.0399
+2025-08-07 20:45:57,747 - INFO - Metrics for Attack Class Metrics: Precision=0.5800, Recall=0.9494, F1 Score=0.7201
+2025-08-07 20:45:57,747 - INFO -                         Accuracy=0.9544, FPR=0.0452, FNR=0.0506
+2025-08-07 20:45:57,747 - INFO - Epoch [9/50]
+2025-08-07 20:49:56,181 - INFO - Training Loss: 0.1175, Accuracy: 0.9630
+2025-08-07 20:49:56,181 - INFO - Item time: 0.0398
+2025-08-07 20:50:15,522 - INFO - Metrics for Attack Class Metrics: Precision=0.5900, Recall=0.9560, F1 Score=0.7296
+2025-08-07 20:50:15,522 - INFO -                         Accuracy=0.9563, FPR=0.0437, FNR=0.0440
+2025-08-07 20:50:15,522 - INFO - Epoch [10/50]
+2025-08-07 20:54:12,348 - INFO - Training Loss: 0.1048, Accuracy: 0.9667
+2025-08-07 20:54:12,348 - INFO - Item time: 0.0397
+2025-08-07 20:54:31,788 - INFO - Metrics for Attack Class Metrics: Precision=0.5626, Recall=0.9634, F1 Score=0.7104
+2025-08-07 20:54:31,788 - INFO -                         Accuracy=0.9515, FPR=0.0493, FNR=0.0366
+2025-08-07 20:54:31,789 - INFO - Epoch [11/50]
+2025-08-07 20:58:30,232 - INFO - Training Loss: 0.0927, Accuracy: 0.9692
+2025-08-07 20:58:30,233 - INFO - Item time: 0.0398
+2025-08-07 20:58:49,538 - INFO - Metrics for Attack Class Metrics: Precision=0.6619, Recall=0.9527, F1 Score=0.7811
+2025-08-07 20:58:49,538 - INFO -                         Accuracy=0.9670, FPR=0.0320, FNR=0.0473
+2025-08-07 20:58:49,539 - INFO - Epoch [12/50]
+2025-08-07 21:02:47,577 - INFO - Training Loss: 0.0821, Accuracy: 0.9723
+2025-08-07 21:02:47,577 - INFO - Item time: 0.0400
+2025-08-07 21:03:06,958 - INFO - Metrics for Attack Class Metrics: Precision=0.8171, Recall=0.9303, F1 Score=0.8701
+2025-08-07 21:03:06,959 - INFO -                         Accuracy=0.9828, FPR=0.0137, FNR=0.0697
+2025-08-07 21:03:06,959 - INFO - Epoch [13/50]
+2025-08-07 21:06:59,334 - INFO - Training Loss: 0.0728, Accuracy: 0.9751
+2025-08-07 21:06:59,335 - INFO - Item time: 0.0393
+2025-08-07 21:07:18,026 - INFO - Metrics for Attack Class Metrics: Precision=0.7652, Recall=0.9524, F1 Score=0.8486
+2025-08-07 21:07:18,026 - INFO -                         Accuracy=0.9790, FPR=0.0192, FNR=0.0476
+2025-08-07 21:07:18,026 - INFO - Epoch [14/50]
+2025-08-07 21:11:48,333 - INFO - 
+Training fold 1/5
+2025-08-07 21:11:55,153 - INFO - Epoch [1/50]
+2025-08-07 21:14:26,991 - INFO - 
+Training fold 1/5
+2025-08-07 21:14:33,812 - INFO - Epoch [1/50]
+2025-08-07 21:14:54,102 - INFO - 
+Training fold 1/5
+2025-08-07 21:15:01,217 - INFO - Epoch [1/50]
+2025-08-07 21:15:57,578 - INFO - Training Loss: 1145.5916, Accuracy: 0.0958
+2025-08-07 21:15:57,579 - INFO - Item time: 0.0122
+2025-08-07 21:16:02,215 - INFO - Macro-Averaged Metrics: Precision=0.4167, Recall=0.0000, F1 Score=0.0001
+2025-08-07 21:16:02,215 - INFO -                         Accuracy=0.0761, FPR=0.0000, FNR=1.0000
+2025-08-07 21:16:02,215 - INFO - Epoch [2/50]
+2025-08-07 21:16:58,750 - INFO - Training Loss: 1.4001, Accuracy: 0.0771
+2025-08-07 21:16:58,750 - INFO - Item time: 0.0121
+2025-08-07 21:17:03,634 - INFO - Macro-Averaged Metrics: Precision=0.5385, Recall=0.0001, F1 Score=0.0002
+2025-08-07 21:17:03,634 - INFO -                         Accuracy=0.0760, FPR=0.0001, FNR=0.9999
+2025-08-07 21:17:03,635 - INFO - Epoch [3/50]
+2025-08-07 21:18:01,391 - INFO - Training Loss: 1.3959, Accuracy: 0.1822
+2025-08-07 21:18:01,391 - INFO - Item time: 0.0122
+2025-08-07 21:18:06,321 - INFO - Macro-Averaged Metrics: Precision=0.0000, Recall=0.0000, F1 Score=0.0000
+2025-08-07 21:18:06,321 - INFO -                         Accuracy=0.0760, FPR=0.0000, FNR=1.0000
+2025-08-07 21:18:06,322 - INFO - Epoch [4/50]
+2025-08-07 21:19:03,457 - INFO - Training Loss: 1.4125, Accuracy: 0.5133
+2025-08-07 21:19:03,457 - INFO - Item time: 0.0122
+2025-08-07 21:19:08,083 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:19:08,083 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:19:08,083 - INFO - Epoch [5/50]
+2025-08-07 21:20:04,914 - INFO - Training Loss: 1.3866, Accuracy: 0.7358
+2025-08-07 21:20:04,914 - INFO - Item time: 0.0120
+2025-08-07 21:20:09,638 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:20:09,638 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:20:09,638 - INFO - Epoch [6/50]
+2025-08-07 21:21:13,293 - INFO - Training Loss: 1.3863, Accuracy: 0.6218
+2025-08-07 21:21:13,293 - INFO - Item time: 0.0120
+2025-08-07 21:21:18,321 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:21:18,321 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:21:18,321 - INFO - Epoch [7/50]
+2025-08-07 21:22:20,327 - INFO - Training Loss: 1.3863, Accuracy: 0.7359
+2025-08-07 21:22:20,327 - INFO - Item time: 0.0120
+2025-08-07 21:22:24,789 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:22:24,789 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:22:24,789 - INFO - Epoch [8/50]
+2025-08-07 21:23:22,007 - INFO - Training Loss: 1.3863, Accuracy: 0.7359
+2025-08-07 21:23:22,007 - INFO - Item time: 0.0119
+2025-08-07 21:23:26,885 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:23:26,885 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:23:26,885 - INFO - Epoch [9/50]
+2025-08-07 21:24:24,172 - INFO - Training Loss: 1.3863, Accuracy: 0.5625
+2025-08-07 21:24:24,172 - INFO - Item time: 0.0120
+2025-08-07 21:24:28,772 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:24:28,772 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:24:28,773 - INFO - Epoch [10/50]
+2025-08-07 21:25:26,332 - INFO - Training Loss: 1.3863, Accuracy: 0.6537
+2025-08-07 21:25:26,332 - INFO - Item time: 0.0121
+2025-08-07 21:25:30,995 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:25:30,995 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:25:30,995 - INFO - Epoch [11/50]
+2025-08-07 21:26:29,974 - INFO - Training Loss: 1.3863, Accuracy: 0.7359
+2025-08-07 21:26:29,974 - INFO - Item time: 0.0123
+2025-08-07 21:26:34,702 - INFO - Macro-Averaged Metrics: Precision=0.3680, Recall=0.5000, F1 Score=0.4240
+2025-08-07 21:26:34,702 - INFO -                         Accuracy=0.7361, FPR=0.5000, FNR=0.5000
+2025-08-07 21:26:34,702 - INFO - Epoch [12/50]

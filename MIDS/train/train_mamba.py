@@ -193,7 +193,7 @@ parser.add_argument("--n_classes", type=int, default=2, help="Number of output c
 parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
 parser.add_argument("--gamma", type=float, default=1.0, help="Gamma parameter for Focal Loss")
 parser.add_argument("--k_folds", type=int, default=5, help="Number of K-folds for cross-validation")
-parser.add_argument("--dataset", type=str, default='cantrainandtest', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
+parser.add_argument("--dataset", type=str, default='own', choices=['road', 'own', 'crysys', 'otids', 'cantrainandtest'], help="Dataset to use")
 opt = parser.parse_args()
 
 # Set device
@@ -263,7 +263,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     if opt.dataset == 'road':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=22).to(device)
     elif opt.dataset == 'own':
-        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+        model = MambaCAN_noid(num_classes=4, data_dim=8).to(device)
     elif opt.dataset == 'crysys':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'otids':
