@@ -1655,40 +1655,29 @@ class MambaCAN_noid(nn.Module):
         )
         
         # Multiple 1D convolutional layers for feature extraction
-        self.data_conv1 = nn.Conv1d(in_channels=data_dim, out_channels=hidden_dim, kernel_size=3, padding=1)
+        self.data_conv1 = nn.Conv1d(in_channels=9, out_channels=hidden_dim, kernel_size=3, padding=1)
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
         
         # Mamba
-        self.MambaLayer = Mamba(d_model=257, d_state=16, d_conv=4, expand=2,)
+        self.MambaLayer = Mamba(d_model=256, d_state=16, d_conv=4, expand=2,)
         
         # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear(257, hidden_dim),
+            nn.Linear(256, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)
         )
     
     def forward(self, x):
-        # Split ID and data
-        id_data = x[:, :, 0]  # Shape: (batch_size, 100)
-        data = x[:, :, 1:]    # Shape: (batch_size, 100, 8)
-        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        
-        # Add an extra dimension to id_data for embedding
-        id_data = id_data.unsqueeze(-1)  # Shape: (batch_size, 100, 1)
-
-        # Process data with convolution
-        data = data.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
+        data = x.permute(0, 2, 1)  # Change to (batch_size, 8, 100)
         data_feat = F.relu(self.data_conv1(data))  # Shape: (batch_size, hidden_dim, 100)
         data_feat = F.relu(self.data_conv2(data_feat))  # Shape: (batch_size, hidden_dim * 2, 100)
         data_feat = data_feat.permute(0, 2, 1)  # Change back to (batch_size, 100, hidden_dim * 2)
         
-        # Concatenate ID and data features
-        combined_feat = torch.cat((id_data, data_feat), dim=-1)  # Shape: (batch_size, 100, embed_dim + hidden_dim * 2)
         
         # Attention mechanism
-        attention_out = self.MambaLayer(combined_feat)  # Shape: (batch_size, 100, hidden_dim * 2)
+        attention_out = self.MambaLayer(data_feat)  # Shape: (batch_size, 100, hidden_dim * 2)
         
         # Max pooling over sequence
         pooled_feat = torch.max(attention_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)
@@ -1727,9 +1716,6 @@ class MambaCAN_Only(nn.Module):
         )
     
     def forward(self, x):
-        # Reshape input (batch_size, 900) -> (batch_size, 100, 9)
-        x = x.view(x.size(0), 100, 9)
-        
         # Attention mechanism
         attention_out = self.MambaLayer(x)  # Shape: (batch_size, 100, hidden_dim * 2)
         
@@ -1829,7 +1815,7 @@ class MambaCAN_2Direction(nn.Module):
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
         
         # Mamba
-        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=16, d_conv=4, expand=2,)
+        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=4, expand=2,)
         self.MambaLayer_backward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=2, expand=2,)
         
         # Fully connected layers

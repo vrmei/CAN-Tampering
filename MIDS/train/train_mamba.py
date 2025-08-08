@@ -224,6 +224,14 @@ elif opt.dataset == 'own':
     source_data = np.load(path)
     data = source_data[:, :-1]
     label = source_data[:, -1]
+    # Determine actual number of classes from labels and override opt.n_classes if necessary
+    unique_labels = np.unique(label)
+    actual_n_classes = len(unique_labels)
+    if opt.n_classes != actual_n_classes:
+        logging.warning(
+            f"Parameter --n_classes ({opt.n_classes}) does not match dataset labels ({actual_n_classes}). Overriding."
+        )
+        opt.n_classes = actual_n_classes
     full_dataset = GetDataset(data, label)
 elif opt.dataset == 'crysys':
     dataset_root = os.path.join(parent_dir, 'data', 'CrySyS')
@@ -263,7 +271,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     if opt.dataset == 'road':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=22).to(device)
     elif opt.dataset == 'own':
-        model = MambaCAN_noid(num_classes=4, data_dim=8).to(device)
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'crysys':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'otids':
@@ -428,6 +436,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
             sum_fpr += fpr
             sum_fnr += fnr
 
+        scheduler.step()
         logging.info(f"{log_prefix} Metrics: Precision={precision:.4f}, Recall={recall:.4f}, F1 Score={f1_score:.4f}")
         logging.info(f"                        Accuracy={val_accuracy:.4f}, FPR={fpr:.4f}, FNR={fnr:.4f}")
 
