@@ -1853,7 +1853,7 @@ class MambaCAN_2Direction(nn.Module):
         backward_out = self.MambaLayer_backward(torch.flip(combined_feat, dims=[1]))  # Backward Mamba: (batch size, 100, hidden_dim * 2)
         backward_out = torch.flip(backward_out, dims=[1])  # Flip back to original sequence order
         # Mamba mechanism
-        Mamba_out = forward_out + backward_out
+        Mamba_out = forward_out
         
         # Max pooling over sequence
         pooled_feat = torch.max(Mamba_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)
