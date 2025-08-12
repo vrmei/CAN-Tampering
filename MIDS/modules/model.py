@@ -1815,7 +1815,7 @@ class MambaCAN_2Direction(nn.Module):
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
         
         # Mamba
-        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=4, expand=2,)
+        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=16, d_conv=4, expand=2,)
         self.MambaLayer_backward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=2, expand=2,)
         
         # Fully connected layers
@@ -1853,7 +1853,7 @@ class MambaCAN_2Direction(nn.Module):
         backward_out = self.MambaLayer_backward(torch.flip(combined_feat, dims=[1]))  # Backward Mamba: (batch size, 100, hidden_dim * 2)
         backward_out = torch.flip(backward_out, dims=[1])  # Flip back to original sequence order
         # Mamba mechanism
-        Mamba_out = forward_out
+        Mamba_out = forward_out + backward_out
         
         # Max pooling over sequence
         pooled_feat = torch.max(Mamba_out, dim=1).values  # Shape: (batch_size, hidden_dim * 2)

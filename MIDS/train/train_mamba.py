@@ -436,7 +436,6 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
             sum_fpr += fpr
             sum_fnr += fnr
 
-        scheduler.step()
         logging.info(f"{log_prefix} Metrics: Precision={precision:.4f}, Recall={recall:.4f}, F1 Score={f1_score:.4f}")
         logging.info(f"                        Accuracy={val_accuracy:.4f}, FPR={fpr:.4f}, FNR={fnr:.4f}")
 
