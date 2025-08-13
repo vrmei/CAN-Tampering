@@ -77,6 +77,11 @@ class MLP(nn.Module):
         self.dropout = nn.Dropout(p=dropout_prob)
         
     def forward(self, x):
+        # If input is 3D (batch_size, seq_len, features), flatten it
+        if x.dim() == 3:
+            batch_size = x.size(0)
+            x = x.view(batch_size, -1)  # Flatten to (batch_size, seq_len * features)
+        
         out = self.fc1(x)
         out = self.ln1(out)
         out = self.relu(out)
@@ -197,8 +202,7 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
         :param x: Input data, shape (batch_size, seq_len, input_dim)
         :return: Classification result
         """
-        batch_size, seq_len = x.size()
-        x = x.unsqueeze(-1)
+        batch_size, seq_len, input_dim = x.size()
 
         # Embedding layer
         x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
@@ -212,95 +216,6 @@ class TransformerClassifier_WithPositionalEncoding(nn.Module):
         # Transformer expects input shape (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
         x = self.transformer_encoder(x)  # (seq_len, batch_size, embedding_dim)
-        x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
-
-        # Pooling: average pooling
-        x = x.mean(dim=1)  # (batch_size, embedding_dim)
-
-        # Classification
-        output = self.fc(x)  # (batch_size, num_classes)
-
-        return output
-
-
-class BERT(nn.Module):
-    def __init__(self, input_dim, num_heads, num_layers, hidden_dim, num_classes, 
-                 embedding_dim=128, dropout=0.1, max_seq_len=600):
-        """
-        Initialize the Transformer classification model with positional encoding and Layer Normalization.
-        
-        :param input_dim: Input feature dimension (e.g., feature dimension of images or time series)
-        :param num_heads: Number of heads in the multi-head attention mechanism
-        :param num_layers: Number of Transformer Encoder layers
-        :param hidden_dim: Hidden layer dimension in the Transformer
-        :param num_classes: Number of classes for classification
-        :param embedding_dim: Embedding dimension
-        :param dropout: Dropout rate
-        :param max_seq_len: Maximum sequence length for positional encoding
-        """
-        super(BERT, self).__init__()
-
-        # Embedding layer: maps input_dim to embedding_dim
-        self.embedding = nn.Linear(input_dim, embedding_dim)
-
-        # Positional encoding
-        self.positional_encoding = PositionalEncodingWithDecay(
-            max_seq_len=max_seq_len,
-            embedding_dim=embedding_dim,
-            decay_interval=9,
-            decay_factor=0.9
-        )
-
-        # LayerNorm layer
-        self.layer_norm_input = nn.LayerNorm(embedding_dim)
-
-        self.dropout = nn.Dropout(dropout)
-
-        # Define 8 identical Transformer Encoder layers
-        self.encoder_layers = nn.ModuleList([
-            nn.TransformerEncoderLayer(
-                d_model=embedding_dim,
-                nhead=num_heads,
-                dim_feedforward=hidden_dim * 4,
-                dropout=dropout,
-                activation='relu'
-            )
-            for _ in range(8)
-        ])
-
-        # Classifier
-        self.fc = nn.Sequential(
-            nn.Linear(embedding_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_dim // 2),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, num_classes)
-        )
-
-    def forward(self, x):
-        """
-        Forward propagation
-        :param x: Input data, shape (batch_size, seq_len, input_dim)
-        :return: Classification result
-        """
-        batch_size, seq_len, input_dim = x.size()
-
-        # Embedding layer
-        x = self.embedding(x)  # (batch_size, seq_len, embedding_dim=128)
-
-        # Add positional encoding
-        x = self.positional_encoding(x)  # (batch_size, seq_len, embedding_dim=128)
-
-        # LayerNorm
-        x = self.layer_norm_input(x)  # (batch_size, seq_len, embedding_dim=128)
-        x = torch.relu(x)  # Activation function
-        x = self.dropout(x)
-
-        # Transformer encoding
-        # Transformer expects input shape (seq_len, batch_size, embedding_dim)
-        x = x.permute(1, 0, 2)  # (seq_len, batch_size, embedding_dim)
-        for encoder in self.encoder_layers:
-            x = encoder(x)  # (seq_len, batch_size, embedding_dim)
         x = x.permute(1, 0, 2)  # (batch_size, seq_len, embedding_dim)
 
         # Pooling: average pooling
@@ -1796,7 +1711,7 @@ class MambaCAN_2Direction_1conv(nn.Module):
 class MambaCAN_2Direction(nn.Module):
 
     
-    def __init__(self, input_width=1, embed_dim=256, data_dim=22, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
+    def __init__(self, input_width=9, embed_dim=256, data_dim=22, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
         super(MambaCAN_2Direction, self).__init__()
         
         # Embedding layer for IDs
@@ -1815,12 +1730,12 @@ class MambaCAN_2Direction(nn.Module):
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
         
         # Mamba
-        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=16, d_conv=4, expand=2,)
-        self.MambaLayer_backward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=2, expand=2,)
+        self.MambaLayer_forward = Mamba(d_model=embed_dim, d_state=16, d_conv=4, expand=2,)
+        self.MambaLayer_backward = Mamba(d_model=embed_dim, d_state=8, d_conv=2, expand=2,)
         
         # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear((embed_dim + hidden_dim * 2), hidden_dim),
+            nn.Linear((embed_dim), hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)

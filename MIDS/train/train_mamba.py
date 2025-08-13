@@ -18,6 +18,7 @@ from tqdm import tqdm
 from modules.model import AttackDetectionModel_Sincos, AttackDetectionModel_no_pos, AttackDetectionModel_no_attn, AttackDetectionModel_no_conv_pos, AttackDetectionModel_no_embedding_pos
 from modules.model import AttackDetectionModel, AttackDetectionModel_Sincos_Fre_EMB, AttackDetectionModel_Sincos_Fre, AttackDetectionModel_LSTM
 from modules.model import MambaCAN, MambaCAN_noconv, MambaCAN_noid, MambaCAN_Only, MambaCAN_2Direction, MambaCAN_2Direction_1conv, MambaCAN_2Direction_Fre
+from modules.model import MLP, BERT, TransformerClassifier_WithPositionalEncoding
 from data_loader import ROADDataset
 from crysys_data_loader import CrySySDataset
 from otids_data_loader import OTIDSDataset
@@ -271,7 +272,9 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     if opt.dataset == 'road':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=22).to(device)
     elif opt.dataset == 'own':
-        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+        # model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+        # model = TransformerClassifier_WithPositionalEncoding(input_dim=9, num_heads=4, num_layers=2, hidden_dim=128, num_classes=opt.n_classes).to(device)
+        model = MLP(input_dim=900, hidden_dim=128, num_classes=opt.n_classes).to(device)
     elif opt.dataset == 'crysys':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'otids':
