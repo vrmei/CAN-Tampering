@@ -232,25 +232,25 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         
         self.conv1 = nn.Sequential(
-            nn.Conv1d(in_channels=1,
+            nn.Conv2d(in_channels=1,
                       out_channels=16,
                       kernel_size=3,
                       stride=1,
                       padding=1),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2)
+            nn.MaxPool2d(kernel_size=2)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv1d(in_channels=16,
+            nn.Conv2d(in_channels=16,
                       out_channels=32,
                       kernel_size=3,
                       stride=1,
                       padding=1),
             nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2),
+            nn.MaxPool2d(kernel_size=2),
         )
         self.output = nn.Sequential(
-            nn.Linear(in_features=7200, out_features=4),
+            nn.Linear(in_features=1600, out_features=4),
             nn.Sigmoid()
         )
         
