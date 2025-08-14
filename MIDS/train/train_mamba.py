@@ -29,6 +29,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import Dataset, DataLoader, Subset
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from itertools import cycle
@@ -92,8 +93,115 @@ def plot_confusion_matrix(y_true, y_pred, class_names, fold, output_dir="./outpu
     
     plt.figure(figsize=(10, 8))
     disp.plot(cmap=plt.cm.Blues, values_format='d')
-    plt.title(f"Confusion Matrix for Fold {fold + 1}")
+    plt.title("Confusion Matrix")
     plt.savefig(f"{output_dir}/confusion_matrix_fold_{fold + 1}_{log_file}.png")
+    plt.close()
+
+# Function to plot detailed metrics for each fold
+def plot_detailed_fold_results(metrics_data, fold, output_dir="./output"):
+    """
+    Plot detailed metrics results for a single fold
+    Args:
+        metrics_data (dict): Dictionary containing all metrics for the fold
+        fold (int): Fold index for file naming
+        output_dir (str): Directory to save the results
+    """
+    # Extract data
+    train_losses = metrics_data['train_losses']
+    train_accs = metrics_data['train_accs']
+    val_accs = metrics_data['val_accs']
+    val_precisions = metrics_data['val_precisions']
+    val_recalls = metrics_data['val_recalls']
+    val_f1s = metrics_data['val_f1s']
+    val_fprs = metrics_data['val_fprs']
+    val_fnrs = metrics_data['val_fnrs']
+    final_metrics = metrics_data['final_metrics']
+    class_names = metrics_data['class_names']
+    
+    # Create detailed plot
+    plt.figure(figsize=(20, 12))
+    
+    # Training loss curve
+    plt.subplot(2, 4, 1)
+    plt.plot(train_losses, label='Train Loss', color='blue')
+    plt.title('Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    # Accuracy curves
+    plt.subplot(2, 4, 2)
+    plt.plot(train_accs, label='Train Acc', color='blue')
+    plt.plot(val_accs, label='Val Acc', color='orange')
+    plt.title('Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+    
+    # Macro-averaged metrics curves
+    plt.subplot(2, 4, 3)
+    plt.plot(val_precisions, label='Precision', color='red')
+    plt.plot(val_recalls, label='Recall', color='green')
+    plt.plot(val_f1s, label='F1-Score', color='blue')
+    plt.title('Macro-Averaged Metrics')
+    plt.xlabel('Epoch')
+    plt.ylabel('Score')
+    plt.legend()
+    plt.grid(True)
+    
+    # Error rates
+    plt.subplot(2, 4, 4)
+    plt.plot(val_fprs, label='False Positive Rate', color='orange')
+    plt.plot(val_fnrs, label='False Negative Rate', color='purple')
+    plt.title('Error Rates')
+    plt.xlabel('Epoch')
+    plt.ylabel('Rate')
+    plt.legend()
+    plt.grid(True)
+    
+    # Confusion Matrix
+    plt.subplot(2, 4, 5)
+    y_true = final_metrics['all_labels']
+    y_pred = final_metrics['all_preds']
+    cm = confusion_matrix(y_true, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=class_names, yticklabels=class_names)
+    plt.title('Confusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    
+    # Per-class precision
+    plt.subplot(2, 4, 6)
+    class_indices = range(len(class_names))
+    plt.bar(class_indices, final_metrics['per_class_precision'], color='red', alpha=0.7)
+    plt.title('Per-Class Precision')
+    plt.xlabel('Class')
+    plt.ylabel('Precision')
+    plt.xticks(class_indices, class_names, rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    # Per-class recall
+    plt.subplot(2, 4, 7)
+    plt.bar(class_indices, final_metrics['per_class_recall'], color='green', alpha=0.7)
+    plt.title('Per-Class Recall')
+    plt.xlabel('Class')
+    plt.ylabel('Recall')
+    plt.xticks(class_indices, class_names, rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    # Per-class F1-score
+    plt.subplot(2, 4, 8)
+    plt.bar(class_indices, final_metrics['per_class_f1'], color='blue', alpha=0.7)
+    plt.title('Per-Class F1-Score')
+    plt.xlabel('Class')
+    plt.ylabel('F1-Score')
+    plt.xticks(class_indices, class_names, rotation=45)
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/detailed_metrics_fold_{fold + 1}.png", dpi=300, bbox_inches='tight')
     plt.close()
 
 def plot_roc_curves(y_true, y_scores, n_classes, fold, output_dir="./output"):
@@ -115,7 +223,7 @@ def plot_roc_curves(y_true, y_scores, n_classes, fold, output_dir="./output"):
         plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate (FPR)', fontsize=12)
         plt.ylabel('True Positive Rate (TPR)', fontsize=12)
-        plt.title(f'Receiver Operating Characteristic (ROC) for Fold {fold + 1}', fontsize=14)
+        plt.title('Receiver Operating Characteristic (ROC)', fontsize=14)
         plt.legend(loc="lower right")
         plt.grid(True)
         plt.savefig(f"{output_dir}/roc_curve_fold_{fold + 1}_{log_file}.png")
@@ -167,7 +275,7 @@ def plot_roc_curves(y_true, y_scores, n_classes, fold, output_dir="./output"):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate (FPR)', fontsize=12)
     plt.ylabel('True Positive Rate (TPR)', fontsize=12)
-    plt.title(f'Receiver Operating Characteristic (ROC) for Fold {fold + 1}', fontsize=14)
+    plt.title('Receiver Operating Characteristic (ROC)', fontsize=14)
     plt.legend(loc="lower right")
     plt.grid(True)
     plt.savefig(f"{output_dir}/roc_curve_fold_{fold + 1}_{log_file}.png")
@@ -199,6 +307,9 @@ opt = parser.parse_args()
 
 # Set device
 device = torch.device("cuda:0")
+
+# Create output directory
+os.makedirs("./output", exist_ok=True)
 
 # Dataset class
 class GetDataset(Dataset):
@@ -267,14 +378,24 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
     # Create DataLoader for this fold from the loaded/created numpy arrays
     traindataloader = DataLoader(train_subset, batch_size=1024, shuffle=True)
     valdataloader = DataLoader(val_subset, batch_size=1024, shuffle=False)
+    
+    # Initialize metric tracking for this fold
+    fold_train_losses = []
+    fold_train_accs = []
+    fold_val_accs = []
+    fold_val_precisions = []
+    fold_val_recalls = []
+    fold_val_f1s = []
+    fold_val_fprs = []
+    fold_val_fnrs = []
 
     # Initialize the model for each fold
     if opt.dataset == 'road':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=22).to(device)
     elif opt.dataset == 'own':
-        # model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
+        model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
         # model = TransformerClassifier_WithPositionalEncoding(input_dim=9, num_heads=4, num_layers=2, hidden_dim=128, num_classes=opt.n_classes).to(device)
-        model = CNN().to(device)
+        # model = CNN().to(device)
     elif opt.dataset == 'crysys':
         model = MambaCAN_2Direction(num_classes=opt.n_classes, data_dim=8).to(device)
     elif opt.dataset == 'otids':
@@ -356,6 +477,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
         logging.info(f"Training Loss: {train_loss / train_total:.4f}, Accuracy: {train_accuracy:.4f}")
         logging.info(f"Item time: {average_time:.4f}")
         all_time.append(average_time)
+        
+        # Record training metrics for this fold
+        fold_train_losses.append(train_loss / train_total)
+        fold_train_accs.append(train_accuracy)
 
         # Evaluation Loop for the current fold
         model.eval()
@@ -441,8 +566,42 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
 
         logging.info(f"{log_prefix} Metrics: Precision={precision:.4f}, Recall={recall:.4f}, F1 Score={f1_score:.4f}")
         logging.info(f"                        Accuracy={val_accuracy:.4f}, FPR={fpr:.4f}, FNR={fnr:.4f}")
+        
+        # Record validation metrics for this fold
+        fold_val_accs.append(val_accuracy)
+        fold_val_precisions.append(precision)
+        fold_val_recalls.append(recall)
+        fold_val_f1s.append(f1_score)
+        fold_val_fprs.append(fpr)
+        fold_val_fnrs.append(fnr)
 
-    # Generate confusion matrix and ROC curve plots after all validation batches
+    # Prepare final metrics for this fold
+    final_fold_metrics = {
+        'all_labels': all_labels,
+        'all_preds': all_preds,
+        'all_scores': all_scores,
+        'per_class_precision': per_class_precision,
+        'per_class_recall': per_class_recall, 
+        'per_class_f1': per_class_f1,
+        'per_class_fpr': per_class_fpr,
+        'per_class_fnr': per_class_fnr
+    }
+    
+    # Prepare metrics data for visualization
+    metrics_data = {
+        'train_losses': fold_train_losses,
+        'train_accs': fold_train_accs,
+        'val_accs': fold_val_accs,
+        'val_precisions': fold_val_precisions,
+        'val_recalls': fold_val_recalls,
+        'val_f1s': fold_val_f1s,
+        'val_fprs': fold_val_fprs,
+        'val_fnrs': fold_val_fnrs,
+        'final_metrics': final_fold_metrics,
+        'class_names': [f"Class {i}" for i in range(num_classes)]
+    }
+    
+    # Generate all visualizations for this fold
     plot_confusion_matrix(
         y_true=np.array(all_labels),
         y_pred=np.array(all_preds),
@@ -457,10 +616,13 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(full_dataset)))):
         fold=fold,
         output_dir="./output"
     )
+    plot_detailed_fold_results(metrics_data, fold, output_dir="./output")
+    
     # Save the model after each fold
     model_save_path = f"./output/{log_file}_fold{fold + 1}_model.pth"
     torch.save(model.state_dict(), model_save_path)
     logging.info(f"Model saved at {model_save_path}")
+    logging.info(f"Detailed results saved for fold {fold + 1}")
 # Final metrics
     log_prefix_final = "Final Macro-Averaged" if opt.dataset == 'own' else "Final Metrics for Attack Class"
     logging.info(f"{log_prefix_final} Metrics across {opt.k_folds} Folds:")

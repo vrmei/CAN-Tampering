@@ -1711,7 +1711,7 @@ class MambaCAN_2Direction_1conv(nn.Module):
 class MambaCAN_2Direction(nn.Module):
 
     
-    def __init__(self, input_width=9, embed_dim=256, data_dim=22, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
+    def __init__(self, input_width=1, embed_dim=256, data_dim=22, hidden_dim=128, num_classes=4, dropout=0.3, num_heads=4):
         super(MambaCAN_2Direction, self).__init__()
         
         # Embedding layer for IDs
@@ -1730,12 +1730,12 @@ class MambaCAN_2Direction(nn.Module):
         self.data_conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim * 2, kernel_size=3, padding=1)
         
         # Mamba
-        self.MambaLayer_forward = Mamba(d_model=embed_dim, d_state=16, d_conv=4, expand=2,)
-        self.MambaLayer_backward = Mamba(d_model=embed_dim, d_state=8, d_conv=2, expand=2,)
+        self.MambaLayer_forward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=16, d_conv=4, expand=2,)
+        self.MambaLayer_backward = Mamba(d_model=embed_dim + hidden_dim * 2, d_state=8, d_conv=2, expand=2,)
         
         # Fully connected layers
         self.fc = nn.Sequential(
-            nn.Linear((embed_dim), hidden_dim),
+            nn.Linear((embed_dim + hidden_dim * 2), hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_classes)
