@@ -14,3 +14,4 @@ MIDS/output
 *.txt
 plots/*
 !requirements.txt
+log/*
