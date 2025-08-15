@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 def parse_otids_line(line):
     """
-    解析OTIDS数据集文件中的单行。
+    Parse a single line from OTIDS dataset file.
     """
     match = re.search(
         r"Timestamp:\s+([\d.]+)\s+ID:\s+([0-9a-fA-F]+)\s+[0-9a-fA-F]+\s+DLC:\s+(\d+)\s+((?:[0-9a-fA-F]{2}\s*)*)",
@@ -23,16 +23,16 @@ def parse_otids_line(line):
     
     data = [int(b, 16) for b in data_str.split()] if data_str else []
     
-    # 将数据填充到8个字节
+    # Pad data to 8 bytes
     padded_data = data + [0] * (8 - len(data))
     
-    # 特征将是 [ID, D0, D1, ..., D7]
+    # Features will be [ID, D0, D1, ..., D7]
     return [can_id] + padded_data
 
 def load_all_otids_data(data_path):
     """
-    加载所有OTIDS .txt文件，处理特征和标签，
-    并返回两个Numpy数组。
+    Load all OTIDS .txt files, process features and labels,
+    and return two Numpy arrays.
     """
     files = {
         "Attack_free_dataset.txt": 0,
@@ -44,18 +44,18 @@ def load_all_otids_data(data_path):
     all_features_list = []
     all_labels_list = []
 
-    print("正在处理OTIDS .txt文件...")
+    print("Processing OTIDS .txt files...")
     for filename, label in files.items():
         file_path = os.path.join(data_path, filename)
         if not os.path.exists(file_path):
-            print(f"警告：未找到文件 {file_path}")
+            print(f"Warning: File not found {file_path}")
             continue
         
         with open(file_path, 'r', errors='ignore') as f:
             lines = f.readlines()
         
         file_features = []
-        for line in tqdm(lines, desc=f"正在处理 {filename}"):
+        for line in tqdm(lines, desc=f"Processing {filename}"):
             parsed_features = parse_otids_line(line)
             if parsed_features:
                 file_features.append(parsed_features)
@@ -75,14 +75,14 @@ def load_all_otids_data(data_path):
 
 class OTIDSDataset(Dataset):
     """
-    用于OTIDS数据集的PyTorch Dataset类。
+    PyTorch Dataset class for OTIDS dataset.
     """
     def __init__(self, data_path, chunk_size=100, transform=None):
         """
         Args:
-            data_path (str): OTIDS数据集目录的路径。
-            chunk_size (int): 每个数据块的大小（例如，100个时间步）。
-            transform (callable, optional): 应用于样本的可选转换。
+            data_path (str): Path to OTIDS dataset directory.
+            chunk_size (int): Size of each data chunk (e.g., 100 timesteps).
+            transform (callable, optional): Optional transform to be applied on a sample.
         """
         self.chunk_size = chunk_size
         self.transform = transform
@@ -91,31 +91,31 @@ class OTIDSDataset(Dataset):
         labels_cache_path = os.path.join(data_path, 'otids_labels.npy')
 
         if os.path.exists(features_cache_path) and os.path.exists(labels_cache_path):
-            print("正在从缓存加载预处理数据...")
+            print("Loading preprocessed data from cache...")
             self.all_features = np.load(features_cache_path)
             self.all_labels = np.load(labels_cache_path)
         else:
-            print("未找到缓存，正在加载和预处理所有OTIDS数据...")
+            print("Cache not found, loading and preprocessing all OTIDS data...")
             self.all_features, self.all_labels = load_all_otids_data(data_path)
             
             if self.all_features.size > 0:
-                print("正在将处理好的数据缓存到.npy文件...")
+                print("Caching processed data to .npy files...")
                 np.save(features_cache_path, self.all_features)
                 np.save(labels_cache_path, self.all_labels)
         
         if len(self.all_features) == 0:
-             print("警告：未加载任何数据。")
+             print("Warning: No data loaded.")
              return
 
-        print(f"\n数据加载完成。总时间步: {len(self.all_features)}")
+        print(f"\nData loading completed. Total timesteps: {len(self.all_features)}")
         attack_count = np.sum(self.all_labels)
         normal_count = len(self.all_labels) - attack_count
         
         imbalance_ratio = normal_count / attack_count if attack_count > 0 else float('inf')
         
-        print(f"总攻击时间步: {attack_count}")
-        print(f"总正常时间步: {normal_count}")
-        print(f"不平衡比率 (正常/攻击): {imbalance_ratio:.2f}")
+        print(f"Total attack timesteps: {attack_count}")
+        print(f"Total normal timesteps: {normal_count}")
+        print(f"Imbalance ratio (normal/attack): {imbalance_ratio:.2f}")
 
     def __len__(self):
         if not hasattr(self, 'all_features'):
@@ -145,28 +145,28 @@ if __name__ == '__main__':
     dataset_root = './data/OTIDS'
 
     if not os.path.exists(dataset_root):
-        print(f"数据集路径 '{dataset_root}' 未找到。")
+        print(f"Dataset path '{dataset_root}' not found.")
     else:
-        print("正在初始化OTIDSDataset...")
+        print("Initializing OTIDSDataset...")
         otids_dataset = OTIDSDataset(data_path=dataset_root, chunk_size=100)
         
         if len(otids_dataset) > 0:
             dataset_size = len(otids_dataset)
-            print(f"\n数据集初始化成功。总数据块数: {dataset_size}")
+            print(f"\nDataset initialization successful. Total data chunks: {dataset_size}")
             
             first_chunk, first_label = otids_dataset[0]
-            print(f"单个数据块的形状: {first_chunk.shape}")
-            print(f"第一个数据块的标签: {first_label}")
+            print(f"Single data chunk shape: {first_chunk.shape}")
+            print(f"First data chunk label: {first_label}")
             
             train_size = int(0.7 * dataset_size)
             val_size = int(0.15 * dataset_size)
             test_size = dataset_size - train_size - val_size
 
-            print(f"\n数据集大小: {dataset_size}, 训练集: {train_size}, 验证集: {val_size}, 测试集: {test_size}")
+            print(f"\nDataset size: {dataset_size}, Train: {train_size}, Validation: {val_size}, Test: {test_size}")
             
             train_dataset, val_dataset, test_dataset = random_split(otids_dataset, [train_size, val_size, test_size])
             
-            # 当使用多进程（num_workers > 0）时，建议在Linux上设置 'fork' 启动方法
+            # When using multiprocessing (num_workers > 0), it's recommended to set 'fork' start method on Linux
             # import torch.multiprocessing as mp
             # mp.set_start_method('fork', force=True)
 
@@ -174,15 +174,15 @@ if __name__ == '__main__':
             val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=0)
             test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False, num_workers=0)
 
-            print("\nDataLoader创建成功！现在可以开始训练。")
+            print("\nDataLoader created successfully! Ready to start training.")
             
-            print("\n从train_loader中取一个批次进行测试...")
+            print("\nTesting by taking one batch from train_loader...")
             try:
                 for i, (chunks_batch, labels_batch) in enumerate(train_loader):
-                    print(f"批次 {i+1} 数据块形状: {chunks_batch.shape}")
-                    print(f"批次 {i+1} 标签形状: {labels_batch.shape}")
-                    if i >= 0: # 仅测试一个批次
+                    print(f"Batch {i+1} data chunks shape: {chunks_batch.shape}")
+                    print(f"Batch {i+1} labels shape: {labels_batch.shape}")
+                    if i >= 0: # Only test one batch
                         break
             except Exception as e:
-                print(f"在DataLoader迭代期间发生错误: {e}")
-                print("请检查您的环境。如果num_workers > 0导致问题，请尝试将其设置为0。") 
+                print(f"Error occurred during DataLoader iteration: {e}")
+                print("Please check your environment. If num_workers > 0 causes issues, try setting it to 0.") 
