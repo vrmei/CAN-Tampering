@@ -9,7 +9,7 @@ dataset
 MIDS/data/*
 MIDS/data_processed/*
 MIDS/finaldataset/*
-MIDS/output
+MIDS/output/*
 *.pth
 *.txt
 plots/*
