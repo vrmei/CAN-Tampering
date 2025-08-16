@@ -5,7 +5,6 @@ modi*.txt
 dataset
 *.npy
 *.pyc
-data/*
 data_processed/*
 finaldataset/*
 output/
